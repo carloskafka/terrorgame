@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Completo de Fases e Equipamentos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a1a, #1a0a1a);
+            color: #ff4d4d;
+            font-family: 'Courier New', monospace;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-container {
+            position: relative;
+            width: 800px;
+            height: 500px;
+            border: 3px solid #ff4d4d;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            overflow: hidden;
+            background: #000;
+        }
+
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+
+        .stats {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #ff4d4d;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 18px;
+        }
+
+        .health-bar {
+            width: 200px;
+            height: 20px;
+            background: #333;
+            border: 1px solid #ff4d4d;
+            border-radius: 10px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(to right, #ff0000, #ff4d4d);
+            width: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .controls {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #ff4d4d;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #ff0000;
+            font-size: 48px;
+            letter-spacing: 3px;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            display: none;
+        }
+
+        .game-over h2 {
+            font-size: 60px;
+            color: #ff0000;
+            margin-bottom: 20px;
+            text-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+        }
+
+        .game-over p {
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        #restart-btn {
+            background: #ff0000;
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        #restart-btn:hover {
+            background: #ff4d4d;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+        }
+
+        .instructions {
+            margin-top: 20px;
+            text-align: center;
+            max-width: 800px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border: 2px solid #ff4d4d;
+            border-radius: 5px;
+        }
+
+        .key {
+            display: inline-block;
+            background: #333;
+            color: #ff4d4d;
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin: 0 3px;
+        }
+
+        .blood-splatter {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        @keyframes flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+                opacity: 1;
+            }
+            20%, 24%, 55% {
+                opacity: 0.5;
+            }
+        }
+
+        .flicker {
+            animation: flicker 0.5s infinite;
+        }
+        
+        /* Nova UI para sistema de equipamentos */
+        .equipment-ui {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #ff4d4d;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 300px;
+        }
+        
+        .equipment-slot {
+            margin-bottom: 10px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        
+        .attribute-ui {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #ff4d4d;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 200px;
+        }
+        
+        .attribute-value {
+            color: #4dff4d;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title flicker">SISTEMA COMPLETO</h1>
+
+    <div class="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <div class="ui-overlay">
+            <div class="stats">
+                Health: <span id="health-span">100</span>
+                <div class="health-bar">
+                    <div class="health-fill" id="health-bar"></div>
+                </div>
+                Score: <span id="score">0</span> |
+                Level: <span id="level">1</span> |
+                Stage: <span id="stage">1</span>
+            </div>
+            <div class="controls">
+                Move: <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> |
+                Attack: <span class="key">SPACE</span> (normal) | Q(slash) | W(thrust) | E(special)
+            </div>
+        </div>
+
+        <!-- UI de equipamentos -->
+        <div class="equipment-ui">
+            <h3>Equipment:</h3>
+            <div class="equipment-slot">
+                Weapon: <span id="weapon-name">None</span>
+            </div>
+            <div class="equipment-slot">
+                Shield: <span id="shield-name">None</span>
+            </div>
+            <div class="equipment-slot">
+                Armor: <span id="armor-name">None</span>
+            </div>
+        </div>
+
+        <!-- UI de atributos -->
+        <div class="attribute-ui">
+            <h3>Attributes:</h3>
+            <div>Strength: <span class="attribute-value" id="attr-strength">10</span></div>
+            <div>Defense: <span class="attribute-value" id="attr-defense">5</span></div>
+            <div>Agility: <span class="attribute-value" id="attr-agility">8</span></div>
+            <div>Vitality: <span class="attribute-value" id="attr-vitality">15</span></div>
+        </div>
+
+        <div class="game-over" id="game-over">
+            <h2>GAME OVER</h2>
+            <p>Your final score: <span id="final-score">0</span></p>
+            <button id="restart-btn">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <div class="instructions">
+        <p>Move your character with WASD keys. Attack monsters with SPACEBAR (normal), Q (slash), W (thrust) or E (special). Survive as long as possible! Monsters are now slower...</p>
+    </div>
+
+    <!-- Botão de ataque para mobile -->
+    <button id="attack-btn" style="position: fixed; bottom: 20px; right: 20px; width: 80px; height: 80px; background: rgba(255, 0, 0, 0.7); border: none; border-radius: 50%; color: white; font-size: 16px; display: none;">ATTACK</button>
+
+    <script>
+        // Game variables
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const healthElement = document.getElementById('health-span');
+        const scoreElement = document.getElementById('score');
+        const levelElement = document.getElementById('level');
+        const stageElement = document.getElementById('stage');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScoreElement = document.getElementById('final-score');
+        const restartBtn = document.getElementById('restart-btn');
+
+        // Audio context for sound effects
+        let audioContext;
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch(e) {
+            console.warn('Web Audio API is not supported in this browser');
+        }
+
+        // Set canvas dimensions
+        canvas.width = 800;
+        canvas.height = 500;
+
+        // Game state
+        let gameRunning = true;
+        let player = {
+            x: 400,
+            y: 250,
+            width: 30,
+            height: 30,
+            speed: 5,
+            health: 100,
+            maxHealth: 100,
+            attackCooldown: 0,
+            // Adicionando tipos de golpes
+            currentAttackType: 'normal', // normal, slash, thrust, special
+            
+            // Sistema de atributos do personagem
+            attributes: {
+                strength: 10,    // Força - afeta dano físico
+                defense: 5,      // Defesa - reduz dano recebido
+                agility: 8,      // Agilidade - afeta velocidade e chance de esquiva
+                vitality: 15     // Vitalidade - aumenta vida máxima
+            },
+            
+            // Sistema de equipamentos
+            equipment: {
+                weapon: null,    // Arma atual (espada, machado, etc.)
+                shield: null,    // Escudo atual
+                armor: null      // Armadura atual
+            },
+            
+            // Inventário para itens e equipamentos
+            inventory: {
+                items: [],       // Itens coletados
+                equipment: []    // Equipamentos disponíveis
+            }
+        };
+
+        // Sistema de fases
+        let currentStage = 1;
+        let stageProgression = {
+            stages: [
+                { level: 1, monsterCount: 3, difficulty: 1.0 },
+                { level: 2, monsterCount: 5, difficulty: 1.2 },
+                { level: 3, monsterCount: 7, difficulty: 1.4 },
+                { level: 4, monsterCount: 9, difficulty: 1.6 },
+                { level: 5, monsterCount: 11, difficulty: 1.8 }
+            ],
+            bossStage: 5 // Boss a cada 5 fases
+        };
+
+        // Tipos de equipamentos disponíveis
+        const equipmentTypes = {
+            weapons: [
+                { name: "Iron Sword", type: "weapon", damageBonus: 10, defenseBonus: 0, speedBonus: 0 },
+                { name: "Steel Sword", type: "weapon", damageBonus: 15, defenseBonus: 0, speedBonus: 0 },
+                { name: "Dragon Sword", type: "weapon", damageBonus: 25, defenseBonus: 0, speedBonus: 0 }
+            ],
+            shields: [
+                { name: "Wooden Shield", type: "shield", damageBonus: 0, defenseBonus: 5, speedBonus: -1 },
+                { name: "Iron Shield", type: "shield", damageBonus: 0, defenseBonus: 10, speedBonus: -2 },
+                { name: "Dragon Shield", type: "shield", damageBonus: 0, defenseBonus: 15, speedBonus: -3 }
+            ],
+            armors: [
+                { name: "Leather Armor", type: "armor", damageBonus: 0, defenseBonus: 8, speedBonus: -2 },
+                { name: "Iron Armor", type: "armor", damageBonus: 0, defenseBonus: 12, speedBonus: -4 },
+                { name: "Dragon Armor", type: "armor", damageBonus: 0, defenseBonus: 20, speedBonus: -6 }
+            ]
+        };
+
+        // Tipos de itens que podem ser dropados
+        const itemTypes = [
+            { name: "Health Potion", type: "potion", effect: "heal", value: 30 },
+            { name: "Strength Elixir", type: "elixir", effect: "attribute", attribute: "strength", value: 5 },
+            { name: "Defense Scroll", type: "scroll", effect: "attribute", attribute: "defense", value: 5 }
+        ];
+
+        // Adicionando sprite do Leon de Resident Evil (simulado com formas)
+        function drawPlayer() {
+            // Desenhar o corpo do Leon (simulado com retângulos)
+            ctx.fillStyle = '#4D79FF'; // Azul para roupa
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            // Cabeça
+            ctx.fillStyle = '#F0E68C'; // Pele clara
+            ctx.beginPath();
+            ctx.arc(player.x + 15, player.y - 5, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Olhos (simulados)
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(player.x + 10, player.y - 8, 3, 0, Math.PI * 2);
+            ctx.arc(player.x + 20, player.y - 8, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pupilos
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(player.x + 10, player.y - 8, 1.5, 0, Math.PI * 2);
+            ctx.arc(player.x + 20, player.y - 8, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Arma (espada)
+            if(player.equipment.weapon) {
+                ctx.fillStyle = '#999';
+                ctx.fillRect(player.x + player.width, player.y + 5, 20, 5);
+            }
+        }
+
+        let score = 0;
+        let level = 1;
+        let monsters = [];
+        let bullets = [];
+        let particles = [];
+        let keys = {};
+        let lastTime = 0;
+
+        // Monster class
+        class Monster {
+            constructor(stage) {
+                this.size = Math.random() * 30 + 20;
+                this.x = Math.random() > 0.5 ? -this.size : canvas.width;
+                this.y = Math.random() * (canvas.height - this.size);
+                
+                // Ajuste de dificuldade baseado na fase
+                let baseSpeed = Math.random() * 0.8 + 0.2;
+                if(stage >= 3) {
+                    baseSpeed *= 1.2; // Monstros mais rápidos nas fases avançadas
+                }
+                this.speed = baseSpeed;
+                
+                // Ajuste de vida baseado na fase
+                let baseHealth = 30 + (stage * 15);
+                this.health = baseHealth;
+                this.maxHealth = baseHealth;
+                
+                // Dano baseado na fase
+                this.damage = 5 + (stage * 2);
+                
+                // Cor do monstro depende da fase
+                if(stage <= 2) {
+                    this.color = '#2E8B57'; // Zumbi verde escuro
+                } else if(stage <= 4) {
+                    this.color = '#8B0000'; // Zumbi vermelho
+                } else {
+                    this.color = '#FF0000'; // Monstro vermelho escuro (boss)
+                }
+                
+                // Drop de itens baseado na fase
+                this.dropChance = 0.3 + (stage * 0.1); // Chance aumenta com a fase
+                
+                // Bosses especiais
+                if(stage === stageProgression.bossStage) {
+                    this.isBoss = true;
+                    this.size *= 2;
+                    this.health *= 3;
+                    this.maxHealth *= 3;
+                    this.damage *= 2;
+                    this.color = '#8B0000';
+                    this.name = "BOSS";
+                } else {
+                    this.isBoss = false;
+                    this.name = stage <= 2 ? "Zombie" : (stage <= 4 ? "Mutant" : "Demon");
+                }
+            }
+
+            update() {
+                // Move towards player
+                const dx = player.x - this.x;
+                const dy = player.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > 0) {
+                    this.x += (dx / distance) * this.speed;
+                    this.y += (dy / distance) * this.speed;
+                }
+            }
+
+            draw() {
+                // Draw monster body
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x + this.size/2, this.y + this.size/2, this.size/2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw eyes (monster eyes)
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(this.x + this.size/3, this.y + this.size/3, this.size/8, 0, Math.PI * 2);
+                ctx.arc(this.x + 2*this.size/3, this.y + this.size/3, this.size/8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw pupils (monster pupils)
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(this.x + this.size/3, this.y + this.size/3, this.size/16, 0, Math.PI * 2);
+                ctx.arc(this.x + 2*this.size/3, this.y + this.size/3, this.size/16, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw name if boss
+                if(this.isBoss) {
+                    ctx.fillStyle = 'red';
+                    ctx.font = 'bold 14px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(this.name, this.x + this.size/2, this.y - 10);
+                }
+
+                // Draw health bar
+                const barWidth = this.size;
+                const barHeight = 5;
+                const barX = this.x;
+                const barY = this.y - 10;
+
+                ctx.fillStyle = 'red';
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+
+                ctx.fillStyle = 'green';
+                ctx.fillRect(barX, barY, barWidth * (this.health / this.maxHealth), barHeight);
+            }
+        }
+
+        // Bullet class
+        class Bullet {
+            constructor(x, y, targetX, targetY) {
+                this.x = x;
+                this.y = y;
+                this.size = 5;
+                this.speed = 10;
+
+                // Calculate direction to target
+                const dx = targetX - x;
+                const dy = targetY - y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                this.dx = (dx / distance) * this.speed;
+                this.dy = (dy / distance) * this.speed;
+            }
+
+            update() {
+                this.x += this.dx;
+                this.y += this.dy;
+            }
+
+            draw() {
+                ctx.fillStyle = '#ff9900';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Add glow effect
+                ctx.fillStyle = 'rgba(255, 153, 0, 0.3)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Particle class for effects
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 5 + 2;
+                this.speedX = Math.random() * 6 - 3;
+                this.speedY = Math.random() * 6 - 3;
+                this.color = color;
+                this.life = 30;
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life--;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Initialize game
+        function initGame() {
+            player = {
+                x: 400,
+                y: 250,
+                width: 30,
+                height: 30,
+                speed: 5,
+                health: 100,
+                maxHealth: 100,
+                attackCooldown: 0,
+                // Adicionando tipos de golpes
+                currentAttackType: 'normal', // normal, slash, thrust, special
+                
+                // Sistema de atributos do personagem
+                attributes: {
+                    strength: 10,    // Força - afeta dano físico
+                    defense: 5,      // Defesa - reduz dano recebido
+                    agility: 8,      // Agilidade - afeta velocidade e chance de esquiva
+                    vitality: 15     // Vitalidade - aumenta vida máxima
+                },
+                
+                // Sistema de equipamentos
+                equipment: {
+                    weapon: null,    // Arma atual (espada, machado, etc.)
+                    shield: null,    // Escudo atual
+                    armor: null      // Armadura atual
+                },
+                
+                // Inventário para itens e equipamentos
+                inventory: {
+                    items: [],       // Itens coletados
+                    equipment: []    // Equipamentos disponíveis
+                }
+            };
+
+            monsters = [];
+            bullets = [];
+            particles = [];
+            score = 0;
+            level = 1;
+            currentStage = 1;
+            gameRunning = true;
+            gameOverScreen.style.display = 'none';
+
+            updateUI();
+
+            // Create initial monsters based on stage
+            spawnMonsters();
+        }
+
+        // Update UI elements
+        function updateUI() {
+            if(healthElement) {
+                healthElement.textContent = player.health;
+            }
+            if(scoreElement) {
+                scoreElement.textContent = score;
+            }
+            if(levelElement) {
+                levelElement.textContent = level;
+            }
+            if(stageElement) {
+                stageElement.textContent = currentStage;
+            }
+
+            // Update health bar
+            const healthBar = document.getElementById('health-bar');
+            if (healthBar && player) {
+                healthBar.style.width = (player.health / player.maxHealth * 100) + '%';
+            }
+            
+            // Atualizar UI de equipamentos
+            updateEquipmentUI();
+            
+            // Atualizar UI de atributos
+            updateAttributesUI();
+        }
+
+        function updateEquipmentUI() {
+            document.getElementById('weapon-name').textContent = 
+                player.equipment.weapon ? player.equipment.weapon.name : 'None';
+            document.getElementById('shield-name').textContent = 
+                player.equipment.shield ? player.equipment.shield.name : 'None';
+            document.getElementById('armor-name').textContent = 
+                player.equipment.armor ? player.equipment.armor.name : 'None';
+        }
+
+        function updateAttributesUI() {
+            document.getElementById('attr-strength').textContent = player.attributes.strength;
+            document.getElementById('attr-defense').textContent = player.attributes.defense;
+            document.getElementById('attr-agility').textContent = player.attributes.agility;
+            document.getElementById('attr-vitality').textContent = player.attributes.vitality;
+        }
+
+        // Play sound effect
+        function playSound(frequency, duration, type = 'sine') {
+            if (!audioContext) return;
+
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.type = type;
+                oscillator.frequency.value = frequency;
+                // Reduzindo ainda mais o volume do som
+                gainNode.gain.value = 0.05;
+
+                oscillator.start();
+                setTimeout(() => {
+                    oscillator.stop();
+                }, duration);
+            } catch (e) {
+                console.warn('Error playing sound:', e);
+            }
+        }
+
+        // Create blood splatter effect
+        function createBloodSplatter(x, y) {
+            for (let i = 0; i < 15; i++) {
+                particles.push(new Particle(x, y, '#8B0000'));
+            }
+        }
+
+        // Create attack effect
+        function createAttackEffect(x, y) {
+            // Play attack sound
+            playSound(500, 100, 'square');
+
+            for (let i = 0; i < 20; i++) {
+                particles.push(new Particle(x, y, '#FF4500'));
+            }
+        }
+
+        // Spawn monsters based on stage
+        function spawnMonsters() {
+            const currentStageData = stageProgression.stages.find(s => s.level === level) || stageProgression.stages[0];
+            let monsterCount = currentStageData.monsterCount;
+            
+            // Adicionar boss a cada X fases
+            if(currentStage % stageProgression.bossStage === 0) {
+                monsters.push(new Monster(level));
+                monsterCount--; // Reduz o número de monstros normais para dar espaço ao boss
+            }
+            
+            for (let i = 0; i < monsterCount; i++) {
+                if (monsters.length < 15) {
+                    monsters.push(new Monster(level));
+                }
+            }
+        }
+
+        // Handle keyboard input
+        window.addEventListener('keydown', function(e) {
+            keys[e.key.toLowerCase()] = true;
+
+            // Atalhos para diferentes tipos de golpes:
+            // SPACE - Golpe normal (ataque básico)
+            if (e.key === ' ') {
+                player.currentAttackType = 'normal';
+                performAttack();
+            }
+
+            // Q - Golpe de corte (slash)
+            else if (e.key.toLowerCase() === 'q') {
+                player.currentAttackType = 'slash';
+                performAttack();
+            }
+
+            // W - Golpe perfurante (thrust)
+            else if (e.key.toLowerCase() === 'w') {
+                player.currentAttackType = 'thrust';
+                performAttack();
+            }
+
+            // E - Golpe especial
+            else if (e.key.toLowerCase() === 'e') {
+                player.currentAttackType = 'special';
+                performAttack();
+            }
+        });
+
+        window.addEventListener('keyup', function(e) {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // Função para realizar ataques com diferentes tipos
+        function performAttack() {
+            if (player.attackCooldown <= 0) {
+                player.attackCooldown = 20;
+
+                // Sons diferentes para cada tipo de ataque
+                switch(player.currentAttackType) {
+                    case 'normal':
+                        playSound(500, 100, 'square');
+                        break;
+                    case 'slash':
+                        playSound(600, 150, 'sawtooth');
+                        break;
+                    case 'thrust':
+                        playSound(400, 80, 'triangle');
+                        break;
+                    case 'special':
+                        playSound(300, 200, 'sine');
+                        break;
+                }
+
+                // Efeitos visuais diferentes para cada tipo de ataque
+                switch(player.currentAttackType) {
+                    case 'normal':
+                        createAttackEffect(player.x, player.y);
+                        break;
+                    case 'slash':
+                        // Efeito mais largo para golpe de corte
+                        for (let i = 0; i < 30; i++) {
+                            particles.push(new Particle(player.x + Math.random() * 20 - 10,
+                                                      player.y + Math.random() * 20 - 10,
+                                                      '#FF4500'));
+                        }
+                        break;
+                    case 'thrust':
+                        // Efeito de ponta para golpe perfurante
+                        for (let i = 0; i < 25; i++) {
+                            particles.push(new Particle(player.x + Math.random() * 10 - 5,
+                                                      player.y + Math.random() * 10 - 5,
+                                                      '#FFD700'));
+                        }
+                        break;
+                    case 'special':
+                        // Efeito especial com mais partículas e cor diferente
+                        for (let i = 0; i < 50; i++) {
+                            particles.push(new Particle(player.x + Math.random() * 30 - 15,
+                                                      player.y + Math.random() * 30 - 15,
+                                                      '#9400D3'));
+                        }
+                        break;
+                }
+
+                // Verificar colisões com monstros
+                for (let i = monsters.length - 1; i >= 0; i--) {
+                    const monster = monsters[i];
+                    const dx = player.x - monster.x;
+                    const dy = player.y - monster.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    // Distância de ataque diferente para cada tipo
+                    let attackDistance = 50;
+                    switch(player.currentAttackType) {
+                        case 'normal':
+                            attackDistance = 50;
+                            break;
+                        case 'slash':
+                            attackDistance = 70;
+                            break;
+                        case 'thrust':
+                            attackDistance = 40;
+                            break;
+                        case 'special':
+                            attackDistance = 80;
+                            break;
+                    }
+
+                    // Se o ataque acertar o monstro
+                    if (distance < monster.size + attackDistance) {
+                        let damage = player.attributes.strength; // Dano baseado em força
+                        
+                        switch(player.currentAttackType) {
+                            case 'normal':
+                                damage += 10;
+                                break;
+                            case 'slash':
+                                damage += 25;
+                                break;
+                            case 'thrust':
+                                damage += 15;
+                                break;
+                            case 'special':
+                                damage += 40;
+                                break;
+                        }
+                        
+                        // Aplicar defesa do escudo se tiver
+                        if(player.equipment.shield) {
+                            damage = Math.max(1, damage - player.equipment.shield.defenseBonus);
+                        }
+
+                        monster.health -= damage;
+
+                        // Criar efeito de sangue diferente para cada tipo
+                        switch(player.currentAttackType) {
+                            case 'normal':
+                                createBloodSplatter(monster.x, monster.y);
+                                break;
+                            case 'slash':
+                                for (let i = 0; i < 25; i++) {
+                                    particles.push(new Particle(monster.x + Math.random() * 20 - 10,
+                                                              monster.y + Math.random() * 20 - 10,
+                                                              '#8B0000'));
+                                }
+                                break;
+                            case 'thrust':
+                                for (let i = 0; i < 15; i++) {
+                                    particles.push(new Particle(monster.x + Math.random() * 15 - 7.5,
+                                                              monster.y + Math.random() * 15 - 7.5,
+                                                              '#FF8C00'));
+                                }
+                                break;
+                            case 'special':
+                                for (let i = 0; i < 40; i++) {
+                                    particles.push(new Particle(monster.x + Math.random() * 30 - 15,
+                                                              monster.y + Math.random() * 30 - 15,
+                                                              '#9400D3'));
+                                }
+                                break;
+                        }
+
+                        // Remover monstro se morrer
+                        if (monster.health <= 0) {
+                            // Play monster death sound
+                            playSound(100, 300, 'sine');
+
+                            // Chance de dropar itens
+                            if(Math.random() < monster.dropChance || monster.isBoss) {
+                                dropItem(monster.x, monster.y);
+                            }
+                            
+                            monsters.splice(i, 1);
+                            score += 100;
+                            updateUI();
+                        }
+                    }
+                }
+            }
+        }
+
+        // Função para dropar itens
+        function dropItem(x, y) {
+            let item;
+            
+            if(Math.random() < 0.7) { // 70% de chance de dropar um item comum
+                const randomIndex = Math.floor(Math.random() * itemTypes.length);
+                item = {...itemTypes[randomIndex]};
+                
+                // Adicionar ao inventário do jogador
+                player.inventory.items.push(item);
+            } else if(Math.random() < 0.3) { // 30% de chance de dropar equipamento
+                const equipmentType = Math.floor(Math.random() * 3); // 0=weapon, 1=shield, 2=armor
+                
+                let availableEquipment;
+                switch(equipmentType) {
+                    case 0: // weapon
+                        availableEquipment = equipmentTypes.weapons;
+                        break;
+                    case 1: // shield
+                        availableEquipment = equipmentTypes.shields;
+                        break;
+                    case 2: // armor
+                        availableEquipment = equipmentTypes.armors;
+                        break;
+                }
+                
+                const randomIndex = Math.floor(Math.random() * availableEquipment.length);
+                item = {...availableEquipment[randomIndex]};
+                
+                // Adicionar ao inventário de equipamentos do jogador
+                player.inventory.equipment.push(item);
+            }
+            
+            // Criar partículas para mostrar o drop
+            for (let i = 0; i < 20; i++) {
+                particles.push(new Particle(x, y, '#FFD700'));
+            }
+        }
+
+        // Função para equipar itens do inventário
+        function equipItem(item) {
+            if(item.type === "weapon") {
+                player.equipment.weapon = item;
+            } else if(item.type === "shield") {
+                player.equipment.shield = item;
+            } else if(item.type === "armor") {
+                player.equipment.armor = item;
+            }
+            
+            // Atualizar atributos com os bônus do equipamento
+            updatePlayerAttributes();
+        }
+
+        // Função para usar itens do inventário
+        function useItem(item) {
+            switch(item.effect) {
+                case "heal":
+                    player.health = Math.min(player.maxHealth, player.health + item.value);
+                    break;
+                case "attribute":
+                    if(player.attributes[item.attribute]) {
+                        player.attributes[item.attribute] += item.value;
+                    }
+                    break;
+            }
+            
+            // Remover o item do inventário
+            const index = player.inventory.items.indexOf(item);
+            if(index > -1) {
+                player.inventory.items.splice(index, 1);
+            }
+            
+            updatePlayerAttributes();
+        }
+
+        // Função para atualizar atributos do jogador com base nos equipamentos
+        function updatePlayerAttributes() {
+            // Resetar todos os bônus
+            let totalStrength = player.attributes.strength;
+            let totalDefense = player.attributes.defense;
+            let totalAgility = player.attributes.agility;
+            let totalVitality = player.attributes.vitality;
+            
+            // Aplicar bônus de equipamentos
+            if(player.equipment.weapon) {
+                totalStrength += player.equipment.weapon.damageBonus;
+            }
+            
+            if(player.equipment.shield) {
+                totalDefense += player.equipment.shield.defenseBonus;
+                totalAgility += player.equipment.shield.speedBonus;
+            }
+            
+            if(player.equipment.armor) {
+                totalDefense += player.equipment.armor.defenseBonus;
+                totalVitality += player.equipment.armor.defenseBonus; // Defesa também aumenta vitalidade
+                totalAgility += player.equipment.armor.speedBonus;
+            }
+            
+            // Atualizar atributos do jogador
+            player.attributes.strength = totalStrength;
+            player.attributes.defense = totalDefense;
+            player.attributes.agility = totalAgility;
+            player.attributes.vitality = totalVitality;
+            
+            // Ajustar vida máxima baseada em vitalidade
+            player.maxHealth = 100 + (player.attributes.vitality * 5);
+            if(player.health > player.maxHealth) {
+                player.health = player.maxHealth;
+            }
+        }
+
+        // Game loop
+        function gameLoop(timestamp) {
+            if (!gameRunning) return;
+
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid background
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.05)';
+            ctx.lineWidth = 1;
+
+            for (let x = 0; x < canvas.width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+
+            for (let y = 0; y < canvas.height; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // Update and draw player
+            if (player.attackCooldown > 0) {
+                player.attackCooldown--;
+            }
+
+            // Movement
+            if (keys['w'] && player.y > 0) {
+                player.y -= player.speed;
+            }
+            if (keys['s'] && player.y < canvas.height - player.height) {
+                player.y += player.speed;
+            }
+            if (keys['a'] && player.x > 0) {
+                player.x -= player.speed;
+            }
+            if (keys['d'] && player.x < canvas.width - player.width) {
+                player.x += player.speed;
+            }
+
+            // Draw player
+            drawPlayer();
+
+            // Update and draw monsters
+            for (let i = monsters.length - 1; i >= 0; i--) {
+                const monster = monsters[i];
+                monster.update();
+                monster.draw();
+
+                // Check collision with player
+                const dx = player.x - monster.x;
+                const dy = player.y - monster.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < player.width/2 + monster.size/2) {
+                    // Player takes damage from monster
+                    let damage = monster.damage - (player.attributes.defense / 2);
+                    damage = Math.max(1, damage); // Mínimo de 1 dano
+                    
+                    player.health -= damage;
+                    
+                    // Efeito visual de dano
+                    for (let j = 0; j < 10; j++) {
+                        particles.push(new Particle(player.x + Math.random() * 20 - 10,
+                                                  player.y + Math.random() * 20 - 10,
+                                                  '#FF0000'));
+                    }
+                    
+                    // Play damage sound
+                    playSound(200, 200, 'sine');
+                    
+                    updateUI();
+                }
+            }
+
+            // Update and draw bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                bullet.update();
+                bullet.draw();
+
+                // Remove bullets that go off screen
+                if (bullet.x < 0 || bullet.x > canvas.width || 
+                    bullet.y < 0 || bullet.y > canvas.height) {
+                    bullets.splice(i, 1);
+                }
+            }
+
+            // Update and draw particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const particle = particles[i];
+                particle.update();
+                particle.draw();
+
+                if (particle.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            // Spawn new monsters periodically
+            if (monsters.length < 5 + Math.floor(level / 2)) {
+                spawnMonsters();
+            }
+
+            // Check game over condition
+            if (player.health <= 0) {
+                gameOver();
+                return;
+            }
+
+            // Progression system - Level up when enough score is achieved
+            const levelThreshold = 1000 * level;
+            if (score >= levelThreshold && level < 5) {
+                level++;
+                updateUI();
+                
+                // Spawn more monsters at each level
+                spawnMonsters();
+            }
+
+            // Progression system - Stage up when enough score is achieved
+            const stageThreshold = 2000 * currentStage;
+            if (score >= stageThreshold && currentStage < 10) {
+                currentStage++;
+                updateUI();
+                
+                // Spawn more monsters at each stage
+                spawnMonsters();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            finalScoreElement.textContent = score;
+            gameOverScreen.style.display = 'flex';
+        }
+
+        restartBtn.addEventListener('click', initGame);
+
+        // Start the game
+        initGame();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
