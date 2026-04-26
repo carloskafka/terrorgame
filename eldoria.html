@@ -94,13 +94,18 @@ html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black;
     <div id="joystickArea"><div id="joystickStick"></div></div>
     <div id="btnAtk" class="mobile-btn">ATK</div>
     <div id="btnSkill" class="mobile-btn">Z</div>
+    <div id="btnIce" class="mobile-btn" style="bottom: 260px; right: 140px; width: 55px; height: 55px; background: rgba(0, 255, 255, 0.3);">X</div>
+    <div id="btnThunder" class="mobile-btn" style="bottom: 320px; right: 140px; width: 55px; height: 55px; background: rgba(255, 255, 0, 0.3);">C</div>
+    <div id="btnPotion" class="mobile-btn" style="bottom: 60px; right: 140px; width: 65px; height: 65px; background: rgba(46, 204, 113, 0.4);">Q</div>
     <div id="btnInv" class="mobile-btn">V</div>
     <div id="btnShop" class="mobile-btn">E</div>
+    <div id="btnAchv" class="mobile-btn" style="bottom: 160px; right: 240px; width: 55px; height: 55px; background: rgba(255, 215, 0, 0.3);">H</div>
 </div>
 
 <div id="controls">
     WASD mover | SPACE atacar<br>
-    Z Fireball | E Loja (NPC)<br>
+    Z Fireball | X Ice Blast | C Thunder<br>
+    Q Poção | E Loja | H Conquistas<br>
     V Personagem | F Fullscreen
 </div>
 
@@ -125,6 +130,11 @@ html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black;
     <div id="shopInventoryPanel"></div>
 </div>
 
+<div id="achievementWindow" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:600px; height:80vh; overflow:auto; background:#0a1930; border:3px solid #5ab9ff; padding:20px; border-radius:18px; z-index:5000; color:white;">
+    <div style="display:flex; justify-content:space-between"><h2>🏆 Conquistas</h2><button onclick="toggleAchievements()" style="background:red; color:white; border:none; padding:5px 10px; cursor:pointer;">X</button></div>
+    <div id="achievementList"></div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
 <script>
@@ -141,6 +151,38 @@ let equipped={ weapon:null, shield:null, cape:null, boots:null, ring1:null, ring
 let isAttacking = false;
 let lastSpawnTime = 0;
 
+/* -------- SISTEMA DE ACHIEVEMENTS -------- */
+let playerStats = {
+    totalKills: 0,
+    bossKills: 0,
+    itemsCollected: new Set(),
+    biomesVisited: [],
+    totalGold: 0
+};
+
+let achievements = [
+    { id: "firstBlood", name: "Primeiro Sangue ⚔️", desc: "Derrote seu primeiro monstro", unlocked: false, check: () => playerStats.totalKills >= 1 },
+    { id: "hunter", name: "Caçador 🎯", desc: "Derrote 10 monstros", unlocked: false, check: () => playerStats.totalKills >= 10 },
+    { id: "veteran", name: "Veterano 🛡️", desc: "Derrote 50 monstros", unlocked: false, check: () => playerStats.totalKills >= 50 },
+    { id: "explorer", name: "Explorador 🌍", desc: "Visite todos os biomas", unlocked: false, check: () => playerStats.biomesVisited.length >= 5 },
+    { id: "rich", name: "Rico 💰", desc: "Acumule 500 gold", unlocked: false, check: () => playerStats.totalGold >= 500 },
+    { id: "bossSlayer", name: "Boss Slayer 👹", desc: "Derrote um Boss", unlocked: false, check: () => playerStats.bossKills >= 1 },
+    { id: "level5", name: "Nível 5 ⭐", desc: "Atinga o nível 5", unlocked: false, check: () => player.level >= 5 },
+    { id: "collector", name: "Colecionador 📦", desc: "Encontre 10 tipos de itens", unlocked: false, check: () => playerStats.itemsCollected.size >= 10 }
+];
+
+function checkAchievements() {
+    achievements.forEach(ach => {
+        if(!ach.unlocked && ach.check()) {
+            ach.unlocked = true;
+            floatingText("🏆 " + ach.name, hero.position, "gold");
+            log("<span style='color:gold'>🏆 Achievement: " + ach.name + "</span>");
+            saveGame();
+        }
+    });
+    updateAchievementPanel();
+}
+
 const miniMapCanvas = document.getElementById('minimapCanvas');
 const ctxM = miniMapCanvas.getContext('2d');
 
@@ -150,7 +192,9 @@ const lootTable=[
     { name:"Shadow Cape", slot:"cape", def:5, sp:20, desc:"Feita de sombras puras." },
     { name:"Travel Boots", slot:"boots", def:2, speed:0.08, desc:"Aumenta velocidade." },
     { name:"Ring of Power", slot:"ring", atk:5, desc:"Anel dourado brilhante." },
-    { name:"Ring of Life", slot:"ring", hp:30, desc:"Anel com gema azul." }
+    { name:"Ring of Life", slot:"ring", hp:30, desc:"Anel com gema azul." },
+    { name:"Health Potion", type:"consumable", heal:50, stackable:true, desc:"Recupera 50 HP" },
+    { name:"Super Potion", type:"consumable", heal:100, stackable:true, desc:"Recupera 100 HP" }
 ];
 
 function log(m){ combatLog.innerHTML = `<div>${m}</div>` + combatLog.innerHTML; }
@@ -250,14 +294,36 @@ function spawnMonster(elite=false){
 
 function killMonster(m){
     player.xp += m.userData.xp;
+    
+    // Achievement tracking
+    playerStats.totalKills++;
+    if(m.userData.isBoss) playerStats.bossKills++;
+    
     floatingText("+"+m.userData.xp+" XP", m.position, "lime");
     if(Math.random()>.4){
         let it = JSON.parse(JSON.stringify(lootTable[Math.floor(Math.random()*lootTable.length)]));
-        inventory.push(it); log("<span style='color:cyan'>Recebeu: "+it.name+"</span>");
+        // Stacking para poções
+        if(it.stackable) {
+            let existing = inventory.find(i => i.name === it.name && i.stackable);
+            if(existing) {
+                existing.quantity = (existing.quantity || 1) + 1;
+                log("<span style='color:cyan'>Recebeu: "+it.name+" x"+existing.quantity+"</span>");
+            } else {
+                it.quantity = 1;
+                inventory.push(it);
+                log("<span style='color:cyan'>Recebeu: "+it.name+"</span>");
+            }
+        } else {
+            inventory.push(it);
+            log("<span style='color:cyan'>Recebeu: "+it.name+"</span>");
+        }
+        // Track item type para achievement
+        playerStats.itemsCollected.add(it.name);
     }
     scene.remove(m); m.userData.ui.bar.remove(); m.userData.label.remove();
     monsters.splice(monsters.indexOf(m),1);
     checkLevel();
+    checkAchievements();
 }
 
 function checkLevel(){
@@ -273,6 +339,42 @@ function checkLevel(){
         heroLabel.querySelector(".playerName").innerHTML="John Legend Lv."+player.level;
         floatingText("LEVEL UP! " + bonus, hero.position, "gold");
         recalcStats();
+        checkAchievements();
+        checkBiomeChange();
+    }
+}
+
+/* -------- SISTEMA DE BIOMAS -------- */
+let biomes = [
+    { name: "Green Plains", minLevel: 1, groundColor: 0x3ea55e, skyColor: 0x87ceeb, fogColor: 0x87ceeb },
+    { name: "Dark Forest", minLevel: 5, groundColor: 0x2d5a2d, skyColor: 0x4a4a6a, fogColor: 0x3a3a5a },
+    { name: "Golden Desert", minLevel: 10, groundColor: 0xd4a84b, skyColor: 0xffd7a8, fogColor: 0xffd7a8 },
+    { name: "Frozen Snow", minLevel: 15, groundColor: 0xe8e8e8, skyColor: 0xb8d4e8, fogColor: 0xb8d4e8 },
+    { name: "Volcanic Lands", minLevel: 20, groundColor: 0x8b0000, skyColor: 0xff4500, fogColor: 0xff4500 }
+];
+
+let currentBiome = 0;
+
+function checkBiomeChange(){
+    let newBiome = biomes.findIndex(b => player.level >= b.minLevel && 
+                                          player.level < (biomes[biomes.indexOf(b)+1]?.minLevel || 999));
+    if(newBiome !== currentBiome && newBiome !== -1) {
+        currentBiome = newBiome;
+        let biome = biomes[currentBiome];
+        
+        // Mudar cores
+        ground.material.color.setHex(biome.groundColor);
+        scene.background.setHex(biome.skyColor);
+        scene.fog = new THREE.Fog(biome.fogColor, 50, 150);
+        
+        floatingText("📍 " + biome.name, hero.position, "cyan");
+        log("<span style='color:cyan'>Chegou em: " + biome.name + "</span>");
+        
+        // Track achievement
+        if(!playerStats.biomesVisited.includes(biome.name)) {
+            playerStats.biomesVisited.push(biome.name);
+            checkAchievements();
+        }
     }
 }
 
@@ -282,7 +384,59 @@ function castFireball(){
     let fb = new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshStandardMaterial({color:0xff4400, emissive:0xff0000}));
     fb.position.copy(hero.position).y = 1.2;
     scene.add(fb);
-    fireballs.push({ mesh: fb, dir: lastDir.clone().normalize(), life: 80 });
+    fireballs.push({ mesh: fb, dir: lastDir.clone().normalize(), life: 80, type: "fire", damage: 40 });
+}
+
+function castIceBlast(){
+    if(player.sp < 30){ log("SP insuficiente!"); return; }
+    player.sp -= 30;
+    let ice = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x0088ff}));
+    ice.position.copy(hero.position).y = 1.2;
+    scene.add(ice);
+    fireballs.push({ mesh: ice, dir: lastDir.clone().normalize(), life: 80, type: "ice", damage: 35 });
+}
+
+function castThunderStrike(){
+    if(player.sp < 35){ log("SP insuficiente!"); return; }
+    player.sp -= 35;
+    
+    // Dano em área ao redor do jogador
+    monsters.forEach(m => {
+        if(hero.position.distanceTo(m.position) < 8) {
+            m.userData.hp -= 80;
+            floatingText("-80", m.position, "yellow");
+            if(m.userData.hp <= 0) killMonster(m);
+        }
+    });
+    
+    // Efeito visual de raio
+    let lightning = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.5, 20, 8),
+        new THREE.MeshStandardMaterial({color: 0xffff00, emissive: 0xffaa00, transparent: true, opacity: 0.8})
+    );
+    lightning.position.copy(hero.position).y = 10;
+    lightning.rotation.x = Math.PI;
+    scene.add(lightning);
+    setTimeout(() => scene.remove(lightning), 200);
+    
+    floatingText("⚡ THUNDER!", hero.position, "yellow");
+}
+
+function usePotion(){
+    let potionIndex = inventory.findIndex(i => i.type === "consumable");
+    if(potionIndex === -1) { log("<span style='color:orange'>Sem poções!</span>"); return; }
+    
+    let potion = inventory[potionIndex];
+    player.hp = Math.min(player.maxHp + (equipped.ring1?.hp||0) + (equipped.ring2?.hp||0), player.hp + potion.heal);
+    floatingText("+" + potion.heal + " HP", hero.position, "green");
+    log("<span style='color:green'>Usou " + potion.name + "</span>");
+    
+    if(!potion.stackable || potion.quantity <= 1) {
+        inventory.splice(potionIndex, 1);
+    } else {
+        potion.quantity--;
+    }
+    updatePanels();
 }
 
 function attack(){
@@ -336,8 +490,12 @@ window.addEventListener('touchend', () => {
 /* Mobile Buttons */
 document.getElementById('btnAtk').addEventListener('touchstart', (e) => { e.preventDefault(); attack(); });
 document.getElementById('btnSkill').addEventListener('touchstart', (e) => { e.preventDefault(); castFireball(); });
+document.getElementById('btnIce').addEventListener('touchstart', (e) => { e.preventDefault(); castIceBlast(); });
+document.getElementById('btnThunder').addEventListener('touchstart', (e) => { e.preventDefault(); castThunderStrike(); });
+document.getElementById('btnPotion').addEventListener('touchstart', (e) => { e.preventDefault(); usePotion(); });
 document.getElementById('btnInv').addEventListener('touchstart', (e) => { e.preventDefault(); toggleV(); });
 document.getElementById('btnShop').addEventListener('touchstart', (e) => { e.preventDefault(); toggleShop(); });
+document.getElementById('btnAchv').addEventListener('touchstart', (e) => { e.preventDefault(); toggleAchievements(); });
 
 /* -------- UI E LOJA -------- */
 function recalcStats(){
@@ -354,9 +512,16 @@ function updatePanels(){
     equippedPanel.innerHTML="";
     for(let k in equipped) equippedPanel.innerHTML+=`<div class='item' onclick="unequip('${k}')">${k.toUpperCase()}: ${equipped[k]?equipped[k].name:'Vazio'}</div>`;
     inventoryPanel.innerHTML="";
-    inventory.forEach((it,i)=> inventoryPanel.innerHTML+=`<div class='item' onclick='equip(${i})'><b>${it.name}</b> [${it.slot}]</div>`);
+    inventory.forEach((it,i)=> {
+        let qty = it.stackable && it.quantity > 1 ? ` x${it.quantity}` : '';
+        inventoryPanel.innerHTML+=`<div class='item' onclick='equip(${i})'><b>${it.name}</b> [${it.slot}]${qty}</div>`;
+    });
     shopInventoryPanel.innerHTML="";
     inventory.forEach((it,i)=> shopInventoryPanel.innerHTML+=`<div class='item'><span>${it.name}</span><button class='sell-btn' onclick='sellItem(${i})'>Vender (25G)</button></div>`);
+    
+    // Update gold display and track for achievement
+    goldDisplay.innerText = "Gold: " + player.gold;
+    if(player.gold > playerStats.totalGold) playerStats.totalGold = player.gold;
 }
 
 function sellItem(i){ player.gold += 25; inventory.splice(i,1); updatePanels(); }
@@ -368,6 +533,73 @@ function equip(i){
 function unequip(k){ equipped[k]=null; recalcStats(); applyEquipVisual(); updatePanels(); }
 function toggleV(){ statusWindow.style.display = statusWindow.style.display==="block"?"none":"block"; updatePanels(); }
 function toggleShop(){ shopWindow.style.display = shopWindow.style.display==="block"?"none":"block"; updatePanels(); }
+
+/* -------- SISTEMA DE ACHIEVEMENTS UI -------- */
+let achievementWindowDisplayed = false;
+function toggleAchievements() {
+    achievementWindowDisplayed = !achievementWindowDisplayed;
+    let win = document.getElementById('achievementWindow');
+    if(win) {
+        win.style.display = achievementWindowDisplayed ? "block" : "none";
+        updateAchievementPanel();
+    }
+}
+
+function updateAchievementPanel() {
+    let panel = document.getElementById('achievementList');
+    if(!panel) return;
+    panel.innerHTML = "";
+    achievements.forEach(ach => {
+        let status = ach.unlocked ? "✅" : "🔒";
+        let color = ach.unlocked ? "#2ecc71" : "#666";
+        panel.innerHTML += `
+            <div class='item' style="background:${ach.unlocked ? '#1a4a2e' : '#17304e'}">
+                <div style="color:${color}">
+                    <b>${ach.name}</b><br>
+                    <small>${ach.desc}</small>
+                </div>
+                <span>${status}</span>
+            </div>
+        `;
+    });
+}
+
+function saveGame() {
+    let saveData = {
+        player: player,
+        inventory: inventory,
+        equipped: equipped,
+        playerStats: { ...playerStats, itemsCollected: Array.from(playerStats.itemsCollected) },
+        achievements: achievements,
+        biomesVisited: playerStats.biomesVisited
+    };
+    localStorage.setItem('eldoriaSave', JSON.stringify(saveData));
+}
+
+function loadGame() {
+    let saved = localStorage.getItem('eldoriaSave');
+    if(saved) {
+        let data = JSON.parse(saved);
+        Object.assign(player, data.player);
+        inventory = data.inventory || [];
+        equipped = data.equipped || {};
+        if(data.playerStats) {
+            playerStats.totalKills = data.playerStats.totalKills || 0;
+            playerStats.bossKills = data.playerStats.bossKills || 0;
+            playerStats.itemsCollected = new Set(data.playerStats.itemsCollected || []);
+            playerStats.biomesVisited = data.biomesVisited || [];
+            playerStats.totalGold = data.playerStats.totalGold || 0;
+        }
+        if(data.achievements) achievements = data.achievements;
+        
+        // Restore visual state
+        heroLabel.querySelector(".playerName").innerHTML = "John Legend Lv." + player.level;
+        recalcStats();
+        applyEquipVisual();
+        checkBiomeChange();
+        log("<span style='color:green'>Jogo carregado com sucesso!</span>");
+    }
+}
 
 function floatingText(txt,pos,color){
     let d=document.createElement("div"); d.style.position="fixed"; d.style.color=color; d.style.fontWeight="bold"; d.style.zIndex="6000";
@@ -400,7 +632,10 @@ function animate(time){
         let f = fireballs[i]; f.mesh.position.add(f.dir.clone().multiplyScalar(0.8)); f.life--;
         monsters.forEach(m=>{
             if(f.mesh.position.distanceTo(m.position)<3.5){
-                m.userData.hp -= 40; floatingText("-40", m.position, "red"); f.life=0;
+                let dmg = f.damage || 40;
+                m.userData.hp -= dmg; 
+                floatingText("-"+dmg, m.position, f.type === "ice" ? "cyan" : (f.type === "fire" ? "red" : "yellow")); 
+                f.life=0;
                 if(m.userData.hp <= 0) killMonster(m);
             }
         });
@@ -469,8 +704,12 @@ function animate(time){
 window.onkeydown=e=>{ keys[e.key.toLowerCase()]=true; 
     if(e.code==="Space") attack();
     if(e.key.toLowerCase()==="z") castFireball();
+    if(e.key.toLowerCase()==="x") castIceBlast();
+    if(e.key.toLowerCase()==="c") castThunderStrike();
+    if(e.key.toLowerCase()==="q") usePotion();
     if(e.key.toLowerCase()==="v") toggleV();
     if(e.key.toLowerCase()==="e") toggleShop();
+    if(e.key.toLowerCase()==="h") toggleAchievements();
     if(e.key.toLowerCase()==="f") document.documentElement.requestFullscreen();
 };
 window.onkeyup=e=>keys[e.key.toLowerCase()]=false;
@@ -483,6 +722,13 @@ window.addEventListener('resize', () => {
 
 animate();
 log("Eldoria Mobile Restaurado!");
+log("<span style='color:cyan'>Novidades: Achievements (H), Poções (Q), Ice Blast (X), Thunder Strike (C), Biomas!</span>");
+
+// Load game on start
+loadGame();
+
+// Auto-save every 30 seconds
+setInterval(saveGame, 30000);
 </script>
 </body>
 </html>
