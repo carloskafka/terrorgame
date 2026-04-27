@@ -3,33 +3,76 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Eldoria ARPG - V18 Complete</title>
+<title>Eldoria ARPG - V22 Final</title>
 <style>
 html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black; font-family:Arial; touch-action: none; }
-
 #gameCanvas { position:fixed; inset:0; display:block; width:100vw!important; height:100vh!important; z-index: 1; }
 
+/* HUD Principal */
 #hud{
-    position:fixed; top:15px; left:15px; width:290px;
-    background:rgba(5,15,35,.88); padding:15px; border-radius:15px;
-    z-index:1000; color:white; border: 1px solid rgba(255,255,255,0.1);
+    position:fixed; top:15px; left:15px; width:320px;
+    background:rgba(5,15,35,.9); padding:15px; border-radius:12px;
+    z-index:1000; color:white; border: 2px solid rgba(100,150,255,0.3);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
-.bar{ height:18px; background:#111; border-radius:30px; overflow:hidden; margin-bottom:10px; }
-.fill{ height:100%; transition: width 0.2s; }
-.hp{ background:#d33; }
-.sp{ background:#2d7fff; }
+.bar-container { margin-bottom:8px; }
+.bar-label { font-size:11px; margin-bottom:3px; display:flex; justify-content:space-between; }
+.bar{ height:14px; background:#0a0a15; border-radius:8px; overflow:hidden; border:1px solid #333; }
+.fill{ height:100%; transition: width 0.3s ease-out; }
+.hp-fill{ background:linear-gradient(90deg, #a00, #f33); }
+.sp-fill{ background:linear-gradient(90deg, #0066ff, #3399ff); }
+.xp-fill{ background:linear-gradient(90deg, #b8860b, #ffd700); }
 
+/* Skill Bar Fixa ao lado do HUD */
+#skillBarContainer {
+    position: fixed; top: 15px; left: 350px;
+    display: flex; gap: 5px;
+    z-index: 1000;
+    background: rgba(5,15,35,0.8);
+    padding: 8px;
+    border-radius: 10px;
+    border: 2px solid rgba(100,150,255,0.3);
+}
+.skill-slot {
+    width: 50px; height: 50px;
+    background: rgba(0,0,0,0.6);
+    border: 2px solid #555;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.skill-slot:hover { border-color: #fff; transform: scale(1.05); }
+.skill-slot.has-skill { border-color: #3399ff; box-shadow: 0 0 10px rgba(51,153,255,0.5); }
+.skill-icon { font-size: 24px; }
+.skill-key { 
+    position: absolute; top: -8px; right: -8px; 
+    background: #333; color: white; 
+    font-size: 10px; padding: 2px 6px; 
+    border-radius: 4px; border: 1px solid #666;
+}
+.skill-cooldown {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.7);
+    border-radius: 6px;
+    display: none;
+    align-items: center; justify-content: center;
+    color: white; font-weight: bold; font-size: 18px;
+}
+
+/* Mini-mapa */
 #minimapContainer {
     position: fixed; bottom: 25px; right: 25px;
-    width: 150px; height: 150px;
-    background: rgba(5, 15, 25, 0.85);
+    width: 160px; height: 160px;
+    background: rgba(5, 15, 25, 0.9);
     border: 4px solid #5ab9ff; border-radius: 50%;
     overflow: hidden; z-index: 2000;
     box-shadow: 0 0 25px rgba(0,0,0,0.7);
 }
 #minimapCanvas { display: block; width: 100%; height: 100%; }
 
-/* --- CONTROLES MOBILE --- */
+/* Controles Mobile */
 #mobileControls { position: fixed; inset: 0; pointer-events: none; z-index: 4000; }
 .mobile-btn { 
     pointer-events: auto; position: absolute; 
@@ -37,213 +80,535 @@ html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black;
     border-radius: 50%; color: white; font-weight: bold;
     display: flex; align-items: center; justify-content: center;
     user-select: none; -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(4px);
 }
 #joystickArea { 
     position: absolute; bottom: 40px; left: 40px; 
     width: 140px; height: 140px; background: rgba(255,255,255,0.05); 
     border-radius: 50%; pointer-events: auto;
+    border: 2px dashed rgba(255,255,255,0.2);
 }
 #joystickStick {
     position: absolute; top: 45px; left: 45px; width: 50px; height: 50px;
-    background: rgba(255,255,255,0.4); border-radius: 50%;
+    background: radial-gradient(circle, rgba(100,150,255,0.6), rgba(50,100,200,0.4)); 
+    border-radius: 50%;
+    box-shadow: 0 0 15px rgba(100,150,255,0.5);
 }
-#btnAtk { bottom: 60px; right: 180px; width: 90px; height: 90px; background: rgba(211, 51, 51, 0.4); font-size: 18px; }
-#btnSkill { bottom: 160px; right: 140px; width: 65px; height: 65px; background: rgba(45, 127, 255, 0.4); }
-#btnIce { bottom: 260px; right: 140px; width: 55px; height: 55px; background: rgba(0, 255, 255, 0.3); }
-#btnThunder { bottom: 320px; right: 140px; width: 55px; height: 55px; background: rgba(255, 255, 0, 0.3); }
-#btnPotion { bottom: 60px; right: 140px; width: 65px; height: 65px; background: rgba(46, 204, 113, 0.4); }
-#btnInv { bottom: 160px; right: 40px; width: 65px; height: 65px; }
-#btnShop { bottom: 60px; right: 40px; width: 65px; height: 65px; }
-#btnAchv { bottom: 160px; right: 240px; width: 55px; height: 55px; background: rgba(255, 215, 0, 0.3); }
-#btnPause { top: 15px; right: 15px; width: 50px; height: 50px; background: rgba(255, 165, 0, 0.4); font-size: 20px; }
-#btnMap { bottom: 260px; right: 40px; width: 55px; height: 55px; background: rgba(155, 89, 182, 0.4); }
-#btnSkillTree { bottom: 320px; right: 40px; width: 55px; height: 55px; background: rgba(230, 126, 34, 0.4); }
+#btnAtk { bottom: 60px; right: 180px; width: 80px; height: 80px; background: radial-gradient(circle, rgba(211, 51, 51, 0.6), rgba(150, 20, 20, 0.4)); font-size: 16px; }
+#btnPotion { bottom: 40px; right: 80px; width: 70px; height: 70px; background: radial-gradient(circle, rgba(51, 211, 100, 0.6), rgba(20, 150, 50, 0.4)); font-size: 14px; }
+#btnPause { top: 15px; right: 15px; width: 50px; height: 50px; background: rgba(255,200,50,0.3); font-size: 20px; }
+#btnSkills { bottom: 150px; right: 20px; width: 60px; height: 60px; background: rgba(100,150,255,0.3); font-size: 14px; }
+#btnCharacter { bottom: 220px; right: 20px; width: 60px; height: 60px; background: rgba(150,100,255,0.3); font-size: 14px; }
+#btnMap { bottom: 290px; right: 20px; width: 60px; height: 60px; background: rgba(50,200,150,0.3); font-size: 14px; }
 
-#controls{
-    position:fixed; top:18px; right:18px; background:rgba(0,0,0,.65);
-    padding:14px; border-radius:12px; color:white; z-index:999; font-size:13px;
+/* Janelas Modais */
+.modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 5000;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(5px);
 }
-#combatLog{
-    position:fixed; left:50%; transform:translateX(-50%); bottom:18px;
-    width:400px; height:100px; overflow:auto; background:rgba(0,0,0,.6);
-    border:1px solid rgba(255,255,255,.2); border-radius:14px; padding:12px;
-    color:#d8e7ff; font-size:13px; z-index:1200; pointer-events: none;
-}
-#statusWindow, #shopWindow, #achievementWindow, #skillTreeWindow, #mapWindow, #pauseOverlay{
-    display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-    width:90%; max-width: 680px; height:80vh; overflow:auto; background:#0a1930;
-    border:3px solid #5ab9ff; padding:20px; border-radius:18px; z-index:5000; color:white;
-}
-#pauseOverlay {
-    background: rgba(0,0,0,0.85); text-align: center;
-    display: none; width: 400px; height: auto; max-height: 80vh;
-}
-.item{ background:#17304e; padding:12px; margin:8px 0; border-radius:10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
-.item:hover{ background:#24496f; }
-.nameplate{ position:fixed; pointer-events:none; text-align:center; font-weight:bold; z-index:3000; text-shadow:0 0 6px black; }
-.guild{ display:block; color:#6fd7ff; font-size:12px; }
-.playerName{ display:block; color:#ffd66b; font-size:18px; }
-.title{ display:block; font-size:11px; color:#fff; }
-.sell-btn { background: #e67e22; border:none; color:white; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:bold; }
-
-.skill-node {
-    background: #1a3a5c; border: 2px solid #5ab9ff; border-radius: 10px;
-    padding: 15px; margin: 10px 0; cursor: pointer; transition: all 0.3s;
-}
-.skill-node:hover { background: #2a4a6c; }
-.skill-node.unlocked { border-color: #2ecc71; background: #1a5c3a; }
-.skill-node.maxed { border-color: #f39c12; background: #5c4a1a; }
-.skill-node.locked { opacity: 0.5; cursor: not-allowed; }
-
-/* Hotbar de habilidades */
-#skillHotbar {
-    position: fixed; top: 15px; left: 50%; transform: translateX(-50%);
-    display: flex; gap: 8px; z-index: 3000;
-}
-.hotbar-slot {
-    width: 50px; height: 50px;
-    background: rgba(5, 15, 35, 0.9);
-    border: 2px solid #5ab9ff;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+.modal-content {
+    background: linear-gradient(135deg, #1a2a4a, #0a1525);
+    padding: 30px; border-radius: 20px;
+    border: 2px solid rgba(100,150,255,0.4);
+    box-shadow: 0 0 40px rgba(0,0,0,0.8);
+    max-width: 800px; width: 90%;
+    max-height: 85vh; overflow-y: auto;
     color: white;
-    font-size: 10px;
-    font-weight: bold;
     position: relative;
 }
-.hotbar-slot.active { border-color: #2ecc71; box-shadow: 0 0 10px #2ecc71; }
-.hotbar-slot .key { position: absolute; top: -5px; left: -5px; background: #333; padding: 2px 6px; border-radius: 4px; font-size: 9px; }
-.hotbar-slot .icon { font-size: 20px; }
-.hotbar-slot .cd { position: absolute; bottom: 0; left: 0; height: 3px; background: #e74c3c; width: 100%; }
-
-.pause-btn {
-    background: #3498db; color: white; border: none; padding: 12px 24px;
-    margin: 10px; border-radius: 8px; cursor: pointer; font-size: 16px;
-    width: 200px;
+.modal-header { 
+    font-size: 24px; font-weight: bold; 
+    margin-bottom: 20px; padding-bottom: 15px;
+    border-bottom: 2px solid rgba(100,150,255,0.3);
+    display: flex; justify-content: space-between; align-items: center;
 }
-.pause-btn:hover { background: #2980b9; }
-.pause-btn.resume { background: #2ecc71; }
-.pause-btn.resume:hover { background: #27ae60; }
-.pause-btn.quit { background: #e74c3c; }
-.pause-btn.quit:hover { background: #c0392b; }
+.close-btn {
+    background: rgba(255,50,50,0.3); border: none;
+    color: white; width: 35px; height: 35px;
+    border-radius: 50%; cursor: pointer;
+    font-size: 20px; font-weight: bold;
+    transition: all 0.2s;
+}
+.close-btn:hover { background: rgba(255,50,50,0.6); transform: rotate(90deg); }
 
-/* Esconde controles desktop no mobile e vice-versa */
-@media (max-width: 800px) { #controls { display: none; } }
-@media (min-width: 801px) { #mobileControls { display: none; } }
+/* Árvore de Habilidades */
+.skills-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+.skill-card {
+    background: rgba(0,0,0,0.4);
+    border: 2px solid #444;
+    border-radius: 12px;
+    padding: 15px;
+    cursor: grab;
+    transition: all 0.3s;
+    position: relative;
+}
+.skill-card:hover { 
+    border-color: #3399ff; 
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(51,153,255,0.3);
+}
+.skill-card.dragging { opacity: 0.5; cursor: grabbing; }
+.skill-card h4 { margin: 0 0 8px 0; color: #3399ff; font-size: 16px; }
+.skill-card p { margin: 5px 0; font-size: 12px; color: #aaa; }
+.skill-level { 
+    position: absolute; top: 10px; right: 10px;
+    background: #3399ff; color: white;
+    padding: 3px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: bold;
+}
+.skill-cost { color: #3399ff; font-weight: bold; }
+.skill-damage { color: #ff6b6b; font-weight: bold; }
+
+/* Inventário e Personagem */
+.inventory-grid, .equipment-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 10px; margin-top: 15px;
+}
+.inv-slot {
+    width: 60px; height: 60px;
+    background: rgba(0,0,0,0.5);
+    border: 2px solid #555;
+    border-radius: 8px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+}
+.inv-slot:hover { border-color: #ffd700; background: rgba(255,215,0,0.1); }
+.inv-slot.equipped { border-color: #33ff6b; box-shadow: 0 0 10px rgba(51,255,107,0.3); }
+.inv-icon { font-size: 28px; }
+.inv-qty { 
+    position: absolute; bottom: 2px; right: 4px;
+    font-size: 11px; color: #ffd700; font-weight: bold;
+    text-shadow: 1px 1px 2px black;
+}
+.inv-name { 
+    font-size: 9px; text-align: center; 
+    margin-top: 4px; color: #ddd;
+    max-width: 100%; overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Pause Menu */
+#pauseMenu .modal-content {
+    text-align: center;
+    max-width: 400px;
+}
+.pause-btn {
+    display: block; width: 100%;
+    padding: 15px; margin: 10px 0;
+    background: linear-gradient(135deg, #2a4a7a, #1a3a5a);
+    border: 2px solid rgba(100,150,255,0.3);
+    border-radius: 10px;
+    color: white; font-size: 18px; font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.pause-btn:hover {
+    background: linear-gradient(135deg, #3a6a9a, #2a5a7a);
+    transform: scale(1.05);
+}
+
+/* Mapa Completo */
+#mapModal .modal-content {
+    max-width: 90%; max-height: 90vh;
+}
+#fullMapCanvas {
+    background: #1a1a2e;
+    border-radius: 10px;
+    border: 2px solid #5ab9ff;
+}
+
+/* Notificações */
+.notification {
+    position: fixed; top: 80px; left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(51,153,255,0.9), rgba(0,100,200,0.9));
+    color: white; padding: 12px 25px;
+    border-radius: 25px; font-weight: bold;
+    z-index: 6000; box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    animation: slideDown 0.3s ease-out;
+    border: 2px solid rgba(255,255,255,0.3);
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translate(-50%, -30px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Drag Drop Overlay */
+.drag-overlay {
+    position: fixed; inset: 0;
+    background: rgba(51,153,255,0.1);
+    z-index: 5500;
+    pointer-events: none;
+    display: none;
+}
+.drag-active .skill-slot {
+    border-color: #33ff6b;
+    box-shadow: 0 0 20px rgba(51,255,107,0.6);
+    transform: scale(1.1);
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    #hud { width: 200px; top: 10px; left: 10px; padding: 10px; }
+    #skillBarContainer { 
+        top: auto; bottom: 350px; left: 50%; 
+        transform: translateX(-50%);
+        width: 90%; justify-content: center;
+        flex-wrap: wrap;
+    }
+    .skill-slot { width: 45px; height: 45px; }
+    #minimapContainer { width: 120px; height: 120px; bottom: 15px; right: 15px; }
+    .modal-content { padding: 20px; width: 95%; }
+}
 </style>
 </head>
 <body>
 
+<canvas id="gameCanvas"></canvas>
+
+<!-- HUD -->
 <div id="hud">
-    <h2 style="margin:0">Eldoria</h2>
-    <div id="goldDisplay" style="color:gold; font-weight:bold; margin-bottom:5px;">Gold: 0</div>
-    HP <div class="bar"><div id="hp" class="fill hp"></div></div>
-    SP <div class="bar"><div id="sp" class="fill sp"></div></div>
-    XP <div class="bar"><div id="xp" class="fill" style="background:#2ecc71"></div></div>
-    <div style="margin-top:10px; font-size:12px; color:#aaa;">Skill Points: <span id="skillPoints">0</span></div>
+    <div class="bar-container">
+        <div class="bar-label"><span>HP</span><span id="hpText">100/100</span></div>
+        <div class="bar"><div class="fill hp-fill" id="hpBar" style="width:100%"></div></div>
+    </div>
+    <div class="bar-container">
+        <div class="bar-label"><span>SP</span><span id="spText">50/50</span></div>
+        <div class="bar"><div class="fill sp-fill" id="spBar" style="width:100%"></div></div>
+    </div>
+    <div class="bar-container">
+        <div class="bar-label"><span>XP</span><span id="xpText">0/100</span></div>
+        <div class="bar"><div class="fill xp-fill" id="xpBar" style="width:0%"></div></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:10px;">
+        <span>⚔️ ATK: <b id="atkVal">10</b></span>
+        <span>🛡️ DEF: <b id="defVal">5</b></span>
+        <span>⭐ LVL: <b id="lvlVal">1</b></span>
+    </div>
+    <div style="font-size:11px; color:#aaa; margin-top:5px;">
+        💰 Gold: <b id="goldVal" style="color:#ffd700">0</b> | 
+        💀 Kills: <b id="killsVal">0</b>
+    </div>
 </div>
 
-<div id="mobileControls">
-    <div id="joystickArea"><div id="joystickStick"></div></div>
-    <div id="btnAtk" class="mobile-btn">ATK</div>
-    <div id="btnSkill" class="mobile-btn">Z</div>
-    <div id="btnIce" class="mobile-btn">X</div>
-    <div id="btnThunder" class="mobile-btn">C</div>
-    <div id="btnPotion" class="mobile-btn">Q</div>
-    <div id="btnInv" class="mobile-btn">V</div>
-    <div id="btnShop" class="mobile-btn">E</div>
-    <div id="btnAchv" class="mobile-btn">H</div>
-    <div id="btnPause" class="mobile-btn">P</div>
-    <div id="btnMap" class="mobile-btn">M</div>
-    <div id="btnSkillTree" class="mobile-btn">Y</div>
+<!-- Skill Bar Fixa -->
+<div id="skillBarContainer">
+    <div class="skill-slot" data-slot="1" onclick="useSkillFromBar(1)">
+        <span class="skill-key">1</span>
+        <span class="skill-icon"></span>
+        <div class="skill-cooldown"></div>
+    </div>
+    <div class="skill-slot" data-slot="2" onclick="useSkillFromBar(2)">
+        <span class="skill-key">2</span>
+        <span class="skill-icon"></span>
+        <div class="skill-cooldown"></div>
+    </div>
+    <div class="skill-slot" data-slot="3" onclick="useSkillFromBar(3)">
+        <span class="skill-key">3</span>
+        <span class="skill-icon"></span>
+        <div class="skill-cooldown"></div>
+    </div>
+    <div class="skill-slot" data-slot="4" onclick="useSkillFromBar(4)">
+        <span class="skill-key">4</span>
+        <span class="skill-icon"></span>
+        <div class="skill-cooldown"></div>
+    </div>
+    <div class="skill-slot" data-slot="5" onclick="useSkillFromBar(5)">
+        <span class="skill-key">5</span>
+        <span class="skill-icon"></span>
+        <div class="skill-cooldown"></div>
+    </div>
+    <div class="skill-slot" data-slot="6" onclick="useSkillFromBar(6)">
+        <span class="skill-key">6</span>
+        <span class="skill-icon"></span>
+        <div class="skill-cooldown"></div>
+    </div>
+    <div class="skill-slot" data-slot="7" onclick="useSkillFromBar(7)">
+        <span class="skill-key">7</span>
+        <span class="skill-icon"></span>
+        <div class="skill-cooldown"></div>
+    </div>
+    <div class="skill-slot" data-slot="8" onclick="useSkillFromBar(8)">
+        <span class="skill-key">8</span>
+        <span class="skill-icon"></span>
+        <div class="skill-cooldown"></div>
+    </div>
+    <div class="skill-slot" data-slot="9" onclick="useSkillFromBar(9)">
+        <span class="skill-key">9</span>
+        <span class="skill-icon"></span>
+        <div class="skill-cooldown"></div>
+    </div>
+    <div class="skill-slot" data-slot="0" onclick="useSkillFromBar(0)">
+        <span class="skill-key">0</span>
+        <span class="skill-icon"></span>
+        <div class="skill-cooldown"></div>
+    </div>
 </div>
 
-<div id="controls">
-    WASD mover | SPACE atacar<br>
-    Z Fireball | X Ice Blast | C Thunder<br>
-    Q Poção | E Loja | H Conquistas<br>
-    Y Skills | M Mapa | P Pause<br>
-    V Personagem | F Fullscreen
-</div>
-
+<!-- Mini-mapa -->
 <div id="minimapContainer">
-    <canvas id="minimapCanvas" width="180" height="180"></canvas>
+    <canvas id="minimapCanvas" width="160" height="160"></canvas>
 </div>
 
-<div id="combatLog"></div>
-
-<div id="statusWindow">
-    <div style="display:flex; justify-content:space-between"><h2>Ficha do Herói</h2><button onclick="toggleV()" style="background:red; color:white; border:none; padding:5px 10px; cursor:pointer;">X</button></div>
-    <div id="statsPanel" style="background:rgba(255,255,255,0.1); padding:10px; border-radius:8px; margin-bottom:10px;"></div>
-    <h3>Equipado</h3>
-    <div id="equippedPanel"></div>
-    <h3>Mochila</h3>
-    <div id="inventoryPanel"></div>
+<!-- Controles Mobile -->
+<div id="mobileControls">
+    <div id="joystickArea" class="mobile-btn">
+        <div id="joystickStick"></div>
+    </div>
+    <div id="btnAtk" class="mobile-btn">⚔️</div>
+    <div id="btnPotion" class="mobile-btn">🧪</div>
+    <div id="btnPause" class="mobile-btn">⏸️</div>
+    <div id="btnSkills" class="mobile-btn" onclick="toggleModal('skillsModal')">⚡</div>
+    <div id="btnCharacter" class="mobile-btn" onclick="toggleModal('characterModal')">👤</div>
+    <div id="btnMap" class="mobile-btn" onclick="toggleMap()">🗺️</div>
 </div>
 
-<div id="shopWindow">
-    <div style="display:flex; justify-content:space-between"><h2>Ferreiro João</h2><button onclick="toggleShop()" style="background:red; color:white; border:none; padding:5px 10px; cursor:pointer;">X</button></div>
-    <p>Venda seus itens por <span style="color:gold">25 Gold</span> cada.</p>
-    <div id="shopInventoryPanel"></div>
+<!-- Modal Skills -->
+<div id="skillsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>⚡ Árvore de Habilidades</span>
+            <button class="close-btn" onclick="toggleModal('skillsModal')">×</button>
+        </div>
+        <p style="color:#aaa; margin-bottom:20px;">
+            Arraste as habilidades para os slots numerados (1-0) na barra superior.<br>
+            Skill Points disponíveis: <b id="spAvailable" style="color:#3399ff">0</b>
+        </p>
+        <div class="skills-grid" id="skillsGrid"></div>
+    </div>
 </div>
 
-<div id="achievementWindow">
-    <div style="display:flex; justify-content:space-between"><h2>🏆 Conquistas</h2><button onclick="toggleAchievements()" style="background:red; color:white; border:none; padding:5px 10px; cursor:pointer;">X</button></div>
-    <div id="achievementList"></div>
+<!-- Modal Personagem/Inventário -->
+<div id="characterModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>👤 Personagem & Inventário</span>
+            <button class="close-btn" onclick="toggleModal('characterModal')">×</button>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+            <div>
+                <h3 style="color:#3399ff; margin-bottom:15px;">📦 Equipamento</h3>
+                <div class="equipment-grid" id="equipmentGrid"></div>
+            </div>
+            <div>
+                <h3 style="color:#ffd700; margin-bottom:15px;">🎒 Inventário</h3>
+                <div class="inventory-grid" id="inventoryGrid"></div>
+            </div>
+        </div>
+        <div style="margin-top:25px; padding-top:20px; border-top:2px solid rgba(100,150,255,0.3);">
+            <h3 style="color:#33ff6b;">📊 Atributos</h3>
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin-top:15px;">
+                <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:10px; text-align:center;">
+                    <div style="font-size:24px;">⚔️</div>
+                    <div style="font-size:20px; font-weight:bold; color:#ff6b6b;" id="modalAtk">10</div>
+                    <div style="font-size:12px; color:#aaa;">Ataque</div>
+                </div>
+                <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:10px; text-align:center;">
+                    <div style="font-size:24px;">🛡️</div>
+                    <div style="font-size:20px; font-weight:bold; color:#3399ff;" id="modalDef">5</div>
+                    <div style="font-size:12px; color:#aaa;">Defesa</div>
+                </div>
+                <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:10px; text-align:center;">
+                    <div style="font-size:24px;">❤️</div>
+                    <div style="font-size:20px; font-weight:bold; color:#33ff6b;" id="modalHp">100</div>
+                    <div style="font-size:12px; color:#aaa;">Vida Máx</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div id="skillTreeWindow">
-    <div style="display:flex; justify-content:space-between"><h2>⚡ Árvore de Habilidades</h2><button onclick="toggleSkillTree()" style="background:red; color:white; border:none; padding:5px 10px; cursor:pointer;">X</button></div>
-    <p style="color:#aaa; margin-bottom:15px;">Skill Points disponíveis: <span id="availableSP" style="color:#f39c12; font-weight:bold;">0</span></p>
-    <div id="skillTreeList"></div>
+<!-- Modal Pause -->
+<div id="pauseMenu" class="modal">
+    <div class="modal-content">
+        <div class="modal-header" style="justify-content:center;">
+            <span>⏸️ Jogo Pausado</span>
+        </div>
+        <button class="pause-btn" onclick="togglePause()">▶️ Continuar</button>
+        <button class="pause-btn" onclick="saveGame(true)">💾 Salvar Jogo</button>
+        <button class="pause-btn" onclick="location.reload()">🔄 Reiniciar</button>
+        <p style="color:#aaa; font-size:12px; margin-top:20px;">Pressione P para continuar</p>
+    </div>
 </div>
 
-<div id="mapWindow">
-    <div style="display:flex; justify-content:space-between"><h2>🗺️ Mapa Completo</h2><button onclick="toggleMap()" style="background:red; color:white; border:none; padding:5px 10px; cursor:pointer;">X</button></div>
-    <canvas id="fullMapCanvas" width="600" height="600" style="background:#0a2814; border:2px solid #5ab9ff; border-radius:10px; display:block; margin:0 auto;"></canvas>
-    <p style="text-align:center; color:#aaa; margin-top:10px;">Pressione M para fechar</p>
+<!-- Modal Mapa -->
+<div id="mapModal" class="modal">
+    <div class="modal-content" style="max-width:95%;">
+        <div class="modal-header">
+            <span>🗺️ Mapa Completo</span>
+            <button class="close-btn" onclick="toggleMap()">×</button>
+        </div>
+        <canvas id="fullMapCanvas" width="800" height="600"></canvas>
+        <p style="text-align:center; color:#aaa; margin-top:15px;">
+            Mostrando em tempo real • Inimigos: <span id="enemyCount">0</span> • Bioma: <span id="currentBiome">Green Plains</span>
+        </p>
+    </div>
 </div>
 
-<div id="pauseOverlay">
-    <h2 style="color:white; margin-bottom:20px;">⏸️ Jogo Pausado</h2>
-    <button class="pause-btn resume" onclick="togglePause()">▶️ Continuar</button><br>
-    <button class="pause-btn" onclick="saveGameManual()">💾 Salvar Jogo</button><br>
-    <button class="pause-btn quit" onclick="resetGame()">🔄 Reiniciar</button>
-</div>
-
-<!-- Hotbar de Habilidades -->
-<div id="skillHotbar"></div>
-
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<!-- Drag Overlay -->
+<div class="drag-overlay" id="dragOverlay"></div>
 
 <script>
-/* -------- ESTADO E MECÂNICAS ORIGINAIS RESTAURADAS -------- */
-let player={ level:1, xp:0, next:50, gold:0, baseAtk:10, baseDef:3, atk:10, def:3, hp:100, maxHp:100, sp:100, maxSp:100, skillPoints: 0 };
-let skillCooldowns = { fireball: 0, iceblast: 0, thunder: 0, heal: 0, shield: 0, berserk: 0 };
-let inventory=[];
-let monsters=[];
-let keys={};
-let floatTexts=[];
-let fireballs=[];
-let visuals=[];
-let lastDir = new THREE.Vector3(0,0,1);
-let equipped={ weapon:null, shield:null, cape:null, boots:null, ring1:null, ring2:null };
-let isAttacking = false;
-let lastSpawnTime = 0;
+// ==================== CONFIGURAÇÃO INICIAL ====================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const minimapCanvas = document.getElementById('minimapCanvas');
+const minimapCtx = minimapCanvas.getContext('2d');
+const fullMapCanvas = document.getElementById('fullMapCanvas');
+const fullMapCtx = fullMapCanvas.getContext('2d');
 
-/* -------- SISTEMA DE ÁUDIO -------- */
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ==================== ESTADO DO JOGO ====================
+let gameRunning = true;
+let isPaused = false;
+let lastTime = 0;
+let gameTime = 0; // Tempo total em segundos
+
+// Jogador
+const player = {
+    x: 0, y: 0, z: 0,
+    vx: 0, vy: 0,
+    speed: 200,
+    hp: 100, maxHp: 100,
+    sp: 50, maxSp: 50,
+    xp: 0, maxXp: 100,
+    level: 1,
+    atk: 10, def: 5,
+    gold: 0,
+    kills: 0,
+    skillPoints: 0,
+    skills: {}, // { fireball: { level: 1, unlocked: true } }
+    skillBar: [null, null, null, null, null, null, null, null, null, null], // Slots 1-9, 0
+    inventory: [],
+    equipment: {
+        weapon: null,
+        armor: null,
+        helmet: null,
+        boots: null,
+        ring: null
+    }
+};
+
+// Definição das Skills
+const SKILLS_DEF = {
+    fireball: { 
+        name: 'Fireball', icon: '🔥', 
+        baseDamage: 25, baseCost: 15, 
+        cooldown: 1000, 
+        description: 'Lança uma bola de fogo',
+        passive: false
+    },
+    iceblast: { 
+        name: 'Ice Blast', icon: '❄️', 
+        baseDamage: 20, baseCost: 20, 
+        cooldown: 1500,
+        description: 'Congela inimigos',
+        passive: false
+    },
+    thunder: { 
+        name: 'Thunder Strike', icon: '⚡', 
+        baseDamage: 35, baseCost: 25, 
+        cooldown: 2000,
+        description: 'Raio poderoso',
+        passive: false
+    },
+    heal: { 
+        name: 'Heal', icon: '💚', 
+        baseDamage: -30, baseCost: 30, 
+        cooldown: 3000,
+        description: 'Recupera vida',
+        passive: false
+    },
+    shield: { 
+        name: 'Shield', icon: '🛡️', 
+        baseDamage: 0, baseCost: 25, 
+        cooldown: 5000,
+        description: 'Escudo temporário',
+        passive: false
+    },
+    berserk: { 
+        name: 'Berserk', icon: '😠', 
+        baseDamage: 0, baseCost: 40, 
+        cooldown: 8000,
+        description: '+50% ATK por 10s',
+        passive: false
+    },
+    fortitude: { 
+        name: 'Fortitude', icon: '💪', 
+        baseDamage: 0, baseCost: 0, 
+        cooldown: 0,
+        description: '+10% HP permanente',
+        passive: true
+    },
+    might: { 
+        name: 'Might', icon: '⚔️', 
+        baseDamage: 0, baseCost: 0, 
+        cooldown: 0,
+        description: '+10% ATK permanente',
+        passive: true
+    }
+};
+
+// Skill Cooldowns
+const skillCooldowns = {};
+
+// Inimigos
+const enemies = [];
+const ENEMY_TYPES = [
+    { name: 'Wolf', icon: '🐺', color: '#8B4513', hp: 30, atk: 8, speed: 120, exp: 20, scale: 1 },
+    { name: 'Goblin', icon: '👺', color: '#228B22', hp: 40, atk: 10, speed: 100, exp: 30, scale: 0.9 },
+    { name: 'Skeleton', icon: '💀', color: '#F5F5DC', hp: 50, atk: 12, speed: 90, exp: 40, scale: 1 },
+    { name: 'Orc', icon: '👹', color: '#556B2F', hp: 80, atk: 15, speed: 80, exp: 60, scale: 1.3 },
+    { name: 'Bear', icon: '🐻', color: '#654321', hp: 100, atk: 18, speed: 110, exp: 80, scale: 1.4 },
+    { name: 'Spider', icon: '🕷️', color: '#2F2F2F', hp: 35, atk: 14, speed: 140, exp: 35, scale: 0.8 },
+    { name: 'Slime', icon: '🦠', color: '#32CD32', hp: 60, atk: 10, speed: 70, exp: 45, scale: 1.1 },
+    { name: 'Golem', icon: '🗿', color: '#808080', hp: 150, atk: 20, speed: 60, exp: 100, scale: 1.6 },
+    { name: 'Demon', icon: '👿', color: '#8B0000', hp: 200, atk: 25, speed: 100, exp: 150, scale: 1.5, boss: true }
+];
+
+// Partículas e Efeitos
+const particles = [];
+const floatingTexts = [];
+
+// Ciclo Dia/Noite e Clima
+let dayTime = 0; // 0-24 horas
+let weather = 'clear'; // clear, rain, snow
+let weatherTimer = 0;
+
+// Inputs
+const keys = {};
+const joystick = { active: false, dx: 0, dy: 0 };
+
+// Drag and Drop
+let draggedSkill = null;
+let draggedSkillData = null;
+
+// ==================== SISTEMA DE ÁUDIO ====================
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
 function playSound(type) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.connect(gain);
     gain.connect(audioCtx.destination);
     
     const now = audioCtx.currentTime;
-    
     switch(type) {
         case 'attack':
             osc.frequency.setValueAtTime(300, now);
@@ -253,1103 +618,1168 @@ function playSound(type) {
             osc.start(now);
             osc.stop(now + 0.1);
             break;
-        case 'fireball':
-            osc.type = 'sawtooth';
+        case 'skill':
             osc.frequency.setValueAtTime(400, now);
-            osc.frequency.exponentialRampToValueAtTime(200, now + 0.3);
-            gain.gain.setValueAtTime(0.2, now);
+            osc.frequency.exponentialRampToValueAtTime(800, now + 0.2);
+            gain.gain.setValueAtTime(0.3, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.type = 'sine';
             osc.start(now);
             osc.stop(now + 0.3);
             break;
-        case 'ice':
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(800, now);
-            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-            osc.start(now);
-            osc.stop(now + 0.2);
-            break;
-        case 'thunder':
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(150, now);
-            osc.frequency.exponentialRampToValueAtTime(50, now + 0.4);
-            gain.gain.setValueAtTime(0.3, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-            osc.start(now);
-            osc.stop(now + 0.4);
-            break;
         case 'hit':
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(200, now);
-            osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
-            gain.gain.setValueAtTime(0.25, now);
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(50, now + 0.15);
+            gain.gain.setValueAtTime(0.4, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            osc.type = 'sawtooth';
             osc.start(now);
             osc.stop(now + 0.15);
             break;
         case 'levelup':
-            osc.type = 'sine';
             osc.frequency.setValueAtTime(400, now);
             osc.frequency.setValueAtTime(600, now + 0.1);
             osc.frequency.setValueAtTime(800, now + 0.2);
             gain.gain.setValueAtTime(0.3, now);
             gain.gain.linearRampToValueAtTime(0, now + 0.4);
+            osc.type = 'square';
             osc.start(now);
             osc.stop(now + 0.4);
             break;
         case 'coin':
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(1200, now);
-            osc.frequency.setValueAtTime(1600, now + 0.1);
+            osc.frequency.setValueAtTime(1000, now);
+            osc.frequency.setValueAtTime(1500, now + 0.1);
             gain.gain.setValueAtTime(0.2, now);
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.type = 'sine';
             osc.start(now);
             osc.stop(now + 0.2);
             break;
-        case 'unlock':
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(600, now);
-            osc.frequency.exponentialRampToValueAtTime(1000, now + 0.3);
-            gain.gain.setValueAtTime(0.25, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-            osc.start(now);
-            osc.stop(now + 0.3);
-            break;
     }
 }
 
-/* -------- SISTEMA DE SKILL TREE -------- */
-let skillTree = [
-    { id: 'fireball', name: 'Fireball 🔥', desc: 'Lança uma bola de fogo', baseCost: 25, level: 1, maxLevel: 5, damage: 40, unlocked: true },
-    { id: 'iceblast', name: 'Ice Blast ❄️', desc: 'Congela inimigos', baseCost: 30, level: 0, maxLevel: 3, damage: 35, unlocked: false, reqLevel: 3 },
-    { id: 'thunder', name: 'Thunder Strike ⚡', desc: 'Raio poderoso', baseCost: 35, level: 0, maxLevel: 3, damage: 80, unlocked: false, reqLevel: 5 },
-    { id: 'heal', name: 'Heal 💚', desc: 'Recupera 60 HP', baseCost: 40, level: 0, maxLevel: 3, heal: 60, unlocked: false, reqLevel: 7 },
-    { id: 'shield', name: 'Shield 🛡️', desc: 'Escudo temporário (+50 HP)', baseCost: 30, level: 0, maxLevel: 3, shield: 50, unlocked: false, reqLevel: 10 },
-    { id: 'berserk', name: 'Berserk 💢', desc: '+50% ATK por 10s', baseCost: 50, level: 0, maxLevel: 2, atkBuff: 1.5, duration: 10000, unlocked: false, reqLevel: 15 }
-];
-
-// Estado das habilidades aprendidas
-let learnedSkills = {
-    fireball: true,
-    iceblast: false,
-    thunder: false,
-    heal: false,
-    shield: false,
-    berserk: false
-};
-
-function updateSkillTreeUI() {
-    document.getElementById('availableSP').innerText = player.skillPoints;
-    document.getElementById('skillPoints').innerText = player.skillPoints;
-    const list = document.getElementById('skillTreeList');
-    list.innerHTML = '';
+// ==================== CONTROLES ====================
+window.addEventListener('keydown', (e) => {
+    keys[e.key.toLowerCase()] = true;
+    keys[e.code] = true; // Para setas
     
-    skillTree.forEach(skill => {
-        const canUnlock = player.level >= (skill.reqLevel || 1);
-        const canUpgrade = player.skillPoints > 0 && skill.level < skill.maxLevel && (skill.unlocked || canUnlock);
-        let status = skill.level >= skill.maxLevel ? 'maxed' : (canUpgrade ? '' : 'locked');
-        if (skill.unlocked && skill.level > 0) status = 'unlocked';
-        
-        const div = document.createElement('div');
-        div.className = `skill-node ${status}`;
-        div.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <strong>${skill.name}</strong>
-                <span style="color:#f39c12;">Nv.${skill.level}/${skill.maxLevel}</span>
-            </div>
-            <p style="margin:5px 0; color:#aaa; font-size:13px;">${skill.desc}</p>
-            ${skill.level < skill.maxLevel ? `<p style="font-size:12px; color:#5ab9ff;">Custo: ${skill.baseCost} SP | Nível: ${skill.level}/${skill.maxLevel}</p>` : '<p style="font-size:12px; color:#2ecc71;">MAXIMIZADO</p>'}
-        `;
-        
-        if (canUpgrade) {
-            div.onclick = () => upgradeSkill(skill.id);
-        } else if (!canUnlock && !skill.unlocked) {
-            div.innerHTML += `<p style="font-size:11px; color:#e74c3c;">Requer nível ${skill.reqLevel}</p>`;
-        }
-        
-        list.appendChild(div);
+    if (e.key >= '1' && e.key <= '9') useSkillFromBar(parseInt(e.key));
+    if (e.key === '0') useSkillFromBar(0);
+    
+    if (e.key.toLowerCase() === 'p') togglePause();
+    if (e.key.toLowerCase() === 'y') toggleModal('skillsModal');
+    if (e.key.toLowerCase() === 'v') toggleModal('characterModal');
+    if (e.key.toLowerCase() === 'm') toggleMap();
+    if (e.key === ' ') attack();
+    if (e.key.toLowerCase() === 'q') usePotion();
+});
+
+window.addEventListener('keyup', (e) => {
+    keys[e.key.toLowerCase()] = false;
+    keys[e.code] = false;
+});
+
+// Joystick Mobile
+const joystickArea = document.getElementById('joystickArea');
+const joystickStick = document.getElementById('joystickStick');
+let joystickCenter = { x: 0, y: 0 };
+
+joystickArea.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    joystick.active = true;
+    const rect = joystickArea.getBoundingClientRect();
+    joystickCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+    updateJoystick(e.touches[0]);
+});
+
+joystickArea.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (joystick.active) updateJoystick(e.touches[0]);
+});
+
+joystickArea.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    joystick.active = false;
+    joystick.dx = 0;
+    joystick.dy = 0;
+    joystickStick.style.transform = `translate(0px, 0px)`;
+});
+
+function updateJoystick(touch) {
+    const maxDist = 45;
+    let dx = touch.clientX - joystickCenter.x;
+    let dy = touch.clientY - joystickCenter.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    
+    if (dist > maxDist) {
+        dx = (dx / dist) * maxDist;
+        dy = (dy / dist) * maxDist;
+    }
+    
+    joystick.dx = dx / maxDist;
+    joystick.dy = dy / maxDist;
+    joystickStick.style.transform = `translate(${dx}px, ${dy}px)`;
+}
+
+// Botões Mobile
+document.getElementById('btnAtk').addEventListener('click', attack);
+document.getElementById('btnPotion').addEventListener('click', usePotion);
+document.getElementById('btnPause').addEventListener('click', togglePause);
+
+// ==================== LÓGICA DO JOGO ====================
+
+function spawnEnemy() {
+    if (enemies.length > 20) return;
+    
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 400 + Math.random() * 400;
+    const type = ENEMY_TYPES[Math.floor(Math.random() * (player.level < 5 ? 4 : ENEMY_TYPES.length))];
+    
+    enemies.push({
+        x: player.x + Math.cos(angle) * dist,
+        y: player.y + Math.sin(angle) * dist,
+        ...type,
+        maxHp: type.hp,
+        vx: 0, vy: 0,
+        rotation: 0
     });
 }
 
-function upgradeSkill(skillId) {
-    const skill = skillTree.find(s => s.id === skillId);
-    if (skill && player.skillPoints > 0 && skill.level < skill.maxLevel) {
-        player.skillPoints--;
-        skill.level++;
-        if (skill.level === 1) {
-            skill.unlocked = true;
-            learnedSkills[skillId] = true;
+function update(dt) {
+    if (isPaused) return;
+    
+    gameTime += dt;
+    dayTime = (gameTime / 60) % 24; // Ciclo de 24 horas por minuto real
+    
+    // Clima
+    weatherTimer -= dt;
+    if (weatherTimer <= 0) {
+        weatherTimer = 30 + Math.random() * 60;
+        const rand = Math.random();
+        if (rand < 0.6) weather = 'clear';
+        else if (rand < 0.9) weather = 'rain';
+        else weather = 'snow';
+    }
+    
+    // Movimento do Jogador
+    let dx = 0, dy = 0;
+    if (keys['w'] || keys['arrowup']) dy = -1;
+    if (keys['s'] || keys['arrowdown']) dy = 1;
+    if (keys['a'] || keys['arrowleft']) dx = -1;
+    if (keys['d'] || keys['arrowright']) dx = 1;
+    
+    if (joystick.active) {
+        dx = joystick.dx;
+        dy = joystick.dy;
+    }
+    
+    if (dx !== 0 || dy !== 0) {
+        const len = Math.sqrt(dx*dx + dy*dy);
+        dx /= len;
+        dy /= len;
+        player.x += dx * player.speed * dt;
+        player.y += dy * player.speed * dt;
+    }
+    
+    // Regeneração SP
+    if (player.sp < player.maxSp) {
+        player.sp = Math.min(player.maxSp, player.sp + 2 * dt);
+    }
+    
+    // Atualizar Inimigos
+    enemies.forEach((enemy, idx) => {
+        const distToPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+        
+        // Rotação: inimigo olha para o jogador
+        enemy.rotation = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+        
+        if (distToPlayer < 300) {
+            const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+            enemy.x += Math.cos(angle) * enemy.speed * dt;
+            enemy.y += Math.sin(angle) * enemy.speed * dt;
         }
-        playSound('unlock');
-        floatingText("Skill Up!", hero.position, "#2ecc71");
-        log(`<span style='color:#2ecc71'>${skill.name} upgraded to level ${skill.level}!</span>`);
-        updateSkillTreeUI();
-        saveGame();
+        
+        // Ataque ao jogador
+        if (distToPlayer < 30 && Math.random() < 0.02) {
+            const damage = Math.max(1, enemy.atk - player.def);
+            player.hp -= damage;
+            playSound('hit');
+            addFloatingText(player.x, player.y - 30, `-${damage}`, '#ff0000');
+            
+            if (player.hp <= 0) {
+                player.hp = player.maxHp;
+                player.x = 0;
+                player.y = 0;
+                showNotification('☠️ Você morreu! Respawn...');
+            }
+        }
+    });
+    
+    // Spawn
+    if (Math.random() < 0.02) spawnEnemy();
+    
+    // Update UI
+    updateUI();
+}
+
+function attack() {
+    if (isPaused) return;
+    playSound('attack');
+    
+    // Dano em área ao redor do jogador
+    enemies.forEach((enemy, idx) => {
+        const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+        if (dist < 80) {
+            const damage = player.atk;
+            enemy.hp -= damage;
+            playSound('hit');
+            addFloatingText(enemy.x, enemy.y - 40, `-${damage}`, '#ffffff');
+            
+            if (enemy.hp <= 0) {
+                killEnemy(idx);
+            }
+        }
+    });
+}
+
+function killEnemy(idx) {
+    const enemy = enemies[idx];
+    player.xp += enemy.exp;
+    player.gold += Math.floor(Math.random() * 10) + 5;
+    player.kills++;
+    playSound('coin');
+    
+    // Chance de drop
+    if (Math.random() < 0.3) {
+        const items = ['🗡️', '🛡️', '🪖', '👢', '💍', '🧪'];
+        const item = items[Math.floor(Math.random() * items.length)];
+        player.inventory.push({ icon: item, name: 'Item', qty: 1 });
+        showNotification(`📦 Item coletado: ${item}`);
+    }
+    
+    enemies.splice(idx, 1);
+    checkLevelUp();
+}
+
+function checkLevelUp() {
+    if (player.xp >= player.maxXp) {
+        player.xp -= player.maxXp;
+        player.level++;
+        player.maxXp = Math.floor(player.maxXp * 1.5);
+        player.maxHp += 20;
+        player.hp = player.maxHp;
+        player.maxSp += 10;
+        player.sp = player.maxSp;
+        player.atk += 3;
+        player.def += 2;
+        player.skillPoints += 2;
+        
+        playSound('levelup');
+        showNotification(`⭐ LEVEL UP! Nível ${player.level}! +2 Skill Points`);
+        
+        // Efeito visual
+        for (let i = 0; i < 30; i++) {
+            particles.push({
+                x: player.x, y: player.y,
+                vx: (Math.random() - 0.5) * 300,
+                vy: (Math.random() - 0.5) * 300,
+                life: 1, color: '#ffd700'
+            });
+        }
     }
 }
 
-function getSkillLevel(skillId) {
-    const skill = skillTree.find(s => s.id === skillId);
-    return skill ? skill.level : 0;
+function useSkillFromBar(slot) {
+    if (isPaused) return;
+    const skillKey = player.skillBar[slot === 0 ? 9 : slot - 1];
+    if (!skillKey || !player.skills[skillKey]) return;
+    
+    const skillDef = SKILLS_DEF[skillKey];
+    const skillData = player.skills[skillKey];
+    
+    // Check cooldown
+    const now = Date.now();
+    if (skillCooldowns[skillKey] && now < skillCooldowns[skillKey]) return;
+    
+    // Check SP cost
+    const cost = skillDef.baseCost * (1 + skillData.level * 0.1);
+    if (player.sp < cost && !skillDef.passive) {
+        showNotification('❌ SP insuficiente!');
+        return;
+    }
+    
+    if (!skillDef.passive) {
+        player.sp -= cost;
+        skillCooldowns[skillKey] = now + skillDef.cooldown;
+    }
+    
+    playSound('skill');
+    
+    // Efeito da skill
+    if (skillDef.baseDamage !== 0) {
+        const damageMultiplier = 1 + (skillData.level * 0.2); // +20% por nível
+        const damage = Math.abs(skillDef.baseDamage) * damageMultiplier;
+        
+        if (skillDef.baseDamage < 0) {
+            // Heal
+            player.hp = Math.min(player.maxHp, player.hp + damage);
+            addFloatingText(player.x, player.y - 50, `+${Math.floor(damage)}`, '#33ff6b', 24);
+        } else {
+            // Dano em área
+            enemies.forEach((enemy, idx) => {
+                const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+                if (dist < 150) {
+                    enemy.hp -= damage;
+                    addFloatingText(enemy.x, enemy.y - 50, `-${Math.floor(damage)}`, '#ff6b6b', 24);
+                    playSound('hit');
+                    
+                    if (enemy.hp <= 0) killEnemy(idx);
+                }
+            });
+        }
+    }
+    
+    // Partículas baseadas no nível
+    const particleCount = 10 + skillData.level * 3;
+    const colors = {
+        fireball: '#ff6600',
+        iceblast: '#00ffff',
+        thunder: '#ffff00',
+        heal: '#33ff6b',
+        shield: '#0066ff',
+        berserk: '#ff0066'
+    };
+    
+    for (let i = 0; i < particleCount; i++) {
+        particles.push({
+            x: player.x, y: player.y,
+            vx: (Math.random() - 0.5) * 400,
+            vy: (Math.random() - 0.5) * 400,
+            life: 1,
+            color: colors[skillKey] || '#ffffff',
+            size: 5 + skillData.level * 2
+        });
+    }
+    
+    showNotification(`✨ ${skillDef.name} usado! (Nível ${skillData.level})`);
 }
 
-function toggleSkillTree() {
-    const win = document.getElementById('skillTreeWindow');
-    win.style.display = win.style.display === 'block' ? 'none' : 'block';
-    updateSkillTreeUI();
-}
-
-// Funções para usar habilidades aprendidas
-function useFireball() {
-    if (!learnedSkills.fireball) { log("Skill não aprendida!"); return; }
-    castFireball();
-}
-
-function useIceBlast() {
-    if (!learnedSkills.iceblast) { log("Skill não aprendida! Requer nível 3."); return; }
-    castIceBlast();
-}
-
-function useThunderStrike() {
-    if (!learnedSkills.thunder) { log("Skill não aprendida! Requer nível 5."); return; }
-    castThunderStrike();
-}
-
-function useHeal() {
-    if (!learnedSkills.heal) { log("Skill não aprendida! Requer nível 7."); return; }
-    const skill = skillTree.find(s => s.id === 'heal');
-    if (player.sp < skill.baseCost) { log("SP insuficiente!"); return; }
-    player.sp -= skill.baseCost;
-    const healAmount = skill.heal + (skill.level * 10);
-    player.hp = Math.min(player.maxHp, player.hp + healAmount);
-    floatingText("+" + healAmount + " HP", hero.position, "green");
+function usePotion() {
+    const potionIdx = player.inventory.findIndex(i => i.icon === '🧪');
+    if (potionIdx === -1) {
+        showNotification('❌ Sem poções!');
+        return;
+    }
+    
+    player.hp = Math.min(player.maxHp, player.hp + 50);
+    player.inventory[potionIdx].qty--;
+    if (player.inventory[potionIdx].qty <= 0) {
+        player.inventory.splice(potionIdx, 1);
+    }
+    
     playSound('levelup');
-    log(`<span style='color:green'>Curado ${healAmount} HP!</span>`);
+    addFloatingText(player.x, player.y - 50, '+50 HP', '#33ff6b');
+    showNotification('🧪 Poção usada!');
 }
 
-function useShield() {
-    if (!learnedSkills.shield) { log("Skill não aprendida! Requer nível 10."); return; }
-    const skill = skillTree.find(s => s.id === 'shield');
-    if (player.sp < skill.baseCost) { log("SP insuficiente!"); return; }
-    player.sp -= skill.baseCost;
-    const shieldAmount = skill.shield + (skill.level * 20);
-    player.hp = Math.min(player.maxHp + shieldAmount, player.hp + shieldAmount);
-    floatingText("🛡️ Shield +" + shieldAmount, hero.position, "cyan");
-    playSound('unlock');
-    log(`<span style='color:cyan'>Escudo ativado! +${shieldAmount} HP</span>`);
+// ==================== DRAG AND DROP DE SKILLS ====================
+
+function initDragDrop() {
+    const skillCards = document.querySelectorAll('.skill-card');
+    
+    skillCards.forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+            const skillKey = card.dataset.skill;
+            if (!player.skills[skillKey] || !player.skills[skillKey].unlocked) {
+                e.preventDefault();
+                return;
+            }
+            
+            draggedSkill = skillKey;
+            draggedSkillData = player.skills[skillKey];
+            card.classList.add('dragging');
+            document.getElementById('dragOverlay').style.display = 'block';
+            document.body.classList.add('drag-active');
+            
+            e.dataTransfer.setData('text/plain', skillKey);
+            e.dataTransfer.effectAllowed = 'copy';
+        });
+        
+        card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+            document.getElementById('dragOverlay').style.display = 'none';
+            document.body.classList.remove('drag-active');
+            draggedSkill = null;
+            draggedSkillData = null;
+        });
+    });
+    
+    // Skill Slots
+    const skillSlots = document.querySelectorAll('.skill-slot');
+    skillSlots.forEach(slot => {
+        slot.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        
+        slot.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            slot.style.borderColor = '#33ff6b';
+            slot.style.boxShadow = '0 0 20px rgba(51,255,107,0.6)';
+        });
+        
+        slot.addEventListener('dragleave', (e) => {
+            slot.style.borderColor = '';
+            slot.style.boxShadow = '';
+        });
+        
+        slot.addEventListener('drop', (e) => {
+            e.preventDefault();
+            slot.style.borderColor = '';
+            slot.style.boxShadow = '';
+            
+            if (draggedSkill) {
+                const slotNum = parseInt(slot.dataset.slot);
+                const arrayIdx = slotNum === 0 ? 9 : slotNum - 1;
+                
+                player.skillBar[arrayIdx] = draggedSkill;
+                updateSkillBarUI();
+                showNotification(`✅ ${SKILLS_DEF[draggedSkill].name} equipada no slot ${slotNum}!`);
+            }
+        });
+    });
 }
 
-function useBerserk() {
-    if (!learnedSkills.berserk) { log("Skill não aprendida! Requer nível 15."); return; }
-    const skill = skillTree.find(s => s.id === 'berserk');
-    if (player.sp < skill.baseCost) { log("SP insuficiente!"); return; }
-    player.sp -= skill.baseCost;
-    const originalAtk = player.baseAtk;
-    player.baseAtk = Math.floor(player.baseAtk * skill.atkBuff);
-    floatingText("💢 BERSERK!", hero.position, "red");
-    playSound('thunder');
-    log(`<span style='color:red'>BERSERK! ATK aumentado em 50%</span>`);
-    setTimeout(() => {
-        player.baseAtk = originalAtk;
-        log("<span style='color:orange'>Efeito Berserk acabou</span>");
-    }, skill.duration);
-}
+// ==================== RENDERIZAÇÃO ====================
 
-/* -------- SISTEMA DE PAUSE -------- */
-let isPaused = false;
-
-function togglePause() {
-    isPaused = !isPaused;
-    const overlay = document.getElementById('pauseOverlay');
-    overlay.style.display = isPaused ? 'block' : 'none';
-}
-
-function saveGameManual() {
-    saveGame();
-    alert('Jogo salvo com sucesso!');
-}
-
-function resetGame() {
-    if (confirm('Tem certeza que deseja reiniciar? Todo o progresso será perdido!')) {
-        localStorage.removeItem('eldoriaSave');
-        location.reload();
+function draw() {
+    // Limpar tela
+    ctx.fillStyle = getSkyColor();
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Câmera segue jogador
+    ctx.save();
+    ctx.translate(canvas.width/2 - player.x, canvas.height/2 - player.y);
+    
+    // Chão
+    ctx.fillStyle = getGroundColor();
+    ctx.fillRect(player.x - canvas.width, player.y - canvas.height, canvas.width * 2, canvas.height * 2);
+    
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    const gridSize = 100;
+    const startX = Math.floor((player.x - canvas.width) / gridSize) * gridSize;
+    const startY = Math.floor((player.y - canvas.height) / gridSize) * gridSize;
+    
+    for (let x = startX; x < player.x + canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, player.y - canvas.height);
+        ctx.lineTo(x, player.y + canvas.height);
+        ctx.stroke();
     }
-}
-
-/* -------- SISTEMA DE MAPA -------- */
-let mapOpen = false;
-let mapUpdateInterval = null;
-
-function toggleMap() {
-    mapOpen = !mapOpen;
-    const win = document.getElementById('mapWindow');
-    win.style.display = mapOpen ? 'block' : 'none';
-    if (mapOpen) {
-        drawFullMap();
-        // Atualiza o mapa em tempo real a cada 100ms
-        if (mapUpdateInterval) clearInterval(mapUpdateInterval);
-        mapUpdateInterval = setInterval(drawFullMap, 100);
-    } else {
-        // Para de atualizar quando fechar
-        if (mapUpdateInterval) {
-            clearInterval(mapUpdateInterval);
-            mapUpdateInterval = null;
+    for (let y = startY; y < player.y + canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(player.x - canvas.width, y);
+        ctx.lineTo(player.x + canvas.width, y);
+        ctx.stroke();
+    }
+    
+    // Inimigos
+    enemies.forEach(enemy => {
+        ctx.save();
+        ctx.translate(enemy.x, enemy.y);
+        ctx.rotate(enemy.rotation);
+        
+        // Corpo do inimigo
+        ctx.fillStyle = enemy.color;
+        const size = 40 * enemy.scale;
+        
+        // Desenhar baseado no tipo
+        if (enemy.name === 'Wolf') {
+            // Lobo - forma alongada
+            ctx.beginPath();
+            ctx.ellipse(0, 0, size * 0.8, size * 0.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Orelhas
+            ctx.beginPath();
+            ctx.moveTo(-10, -15);
+            ctx.lineTo(-5, -30);
+            ctx.lineTo(0, -15);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(10, -15);
+            ctx.lineTo(5, -30);
+            ctx.lineTo(0, -15);
+            ctx.fill();
+        } else if (enemy.name === 'Skeleton') {
+            // Esqueleto - branco com detalhes
+            ctx.fillStyle = '#F5F5DC';
+            ctx.fillRect(-size/2, -size, size, size * 2);
+            // Costelas
+            ctx.fillStyle = '#ccc';
+            for (let i = -2; i <= 2; i++) {
+                ctx.fillRect(-size/3, i * 15, size/1.5, 3);
+            }
+            // Crânio
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(0, -size * 1.2, size/3, 0, Math.PI * 2);
+            ctx.fill();
+            // Olhos vazios
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(-8, -size * 1.2, 4, 0, Math.PI * 2);
+            ctx.arc(8, -size * 1.2, 4, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (enemy.name === 'Goblin') {
+            // Goblin - verde, orelhas pontudas
+            ctx.fillStyle = '#228B22';
+            ctx.beginPath();
+            ctx.arc(0, 0, size/2, 0, Math.PI * 2);
+            ctx.fill();
+            // Orelhas grandes
+            ctx.beginPath();
+            ctx.moveTo(-20, -10);
+            ctx.lineTo(-35, -25);
+            ctx.lineTo(-15, -15);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(20, -10);
+            ctx.lineTo(35, -25);
+            ctx.lineTo(15, -15);
+            ctx.fill();
+            // Nariz grande
+            ctx.fillStyle = '#1a6b1a';
+            ctx.beginPath();
+            ctx.arc(0, 5, 8, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (enemy.name === 'Orc') {
+            // Orc - grande, musculoso
+            ctx.fillStyle = '#556B2F';
+            ctx.fillRect(-size/1.5, -size, size * 1.3, size * 2);
+            // Presas
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.moveTo(-15, 10);
+            ctx.lineTo(-10, 25);
+            ctx.lineTo(-5, 10);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(15, 10);
+            ctx.lineTo(10, 25);
+            ctx.lineTo(5, 10);
+            ctx.fill();
+        } else if (enemy.name === 'Bear') {
+            // Urso - marrom, redondo
+            ctx.fillStyle = '#654321';
+            ctx.beginPath();
+            ctx.arc(0, 0, size * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+            // Orelhas redondas
+            ctx.beginPath();
+            ctx.arc(-25, -25, 12, 0, Math.PI * 2);
+            ctx.arc(25, -25, 12, 0, Math.PI * 2);
+            ctx.fill();
+            // Focinho
+            ctx.fillStyle = '#8B6F47';
+            ctx.beginPath();
+            ctx.ellipse(0, 10, 20, 15, 0, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (enemy.name === 'Spider') {
+            // Aranha - preta, 8 patas
+            ctx.fillStyle = '#2F2F2F';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, size * 0.6, size * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Patas
+            ctx.strokeStyle = '#2F2F2F';
+            ctx.lineWidth = 3;
+            for (let i = -2; i <= 2; i++) {
+                if (i === 0) continue;
+                ctx.beginPath();
+                ctx.moveTo(0, i * 10);
+                ctx.lineTo(40, i * 20);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * 10);
+                ctx.lineTo(-40, i * 20);
+                ctx.stroke();
+            }
+        } else if (enemy.name === 'Slime') {
+            // Slime - verde, translúcido, pulando
+            const bounce = Math.sin(gameTime * 5) * 5;
+            ctx.fillStyle = 'rgba(50,205,50,0.7)';
+            ctx.beginPath();
+            ctx.ellipse(0, bounce, size * 0.6, size * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Brilho
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.beginPath();
+            ctx.arc(-10, -5 + bounce, 8, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (enemy.name === 'Golem') {
+            // Golem - pedra, quadrado
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(-size/1.5, -size * 1.2, size * 1.3, size * 2.4);
+            // Detalhes de pedra
+            ctx.fillStyle = '#696969';
+            ctx.fillRect(-20, -30, 15, 15);
+            ctx.fillRect(25, 10, 20, 20);
+            ctx.fillRect(-30, 20, 18, 18);
+            // Olhos brilhantes
+            ctx.fillStyle = '#ffa500';
+            ctx.fillRect(-15, -40, 10, 8);
+            ctx.fillRect(15, -40, 10, 8);
+        } else if (enemy.name === 'Demon' || enemy.boss) {
+            // Demônio/Boss - vermelho, chifres
+            ctx.fillStyle = '#8B0000';
+            ctx.beginPath();
+            ctx.arc(0, 0, size, 0, Math.PI * 2);
+            ctx.fill();
+            // Chifres grandes
+            ctx.fillStyle = '#4a0000';
+            ctx.beginPath();
+            ctx.moveTo(-30, -40);
+            ctx.lineTo(-50, -80);
+            ctx.lineTo(-10, -50);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(30, -40);
+            ctx.lineTo(50, -80);
+            ctx.lineTo(10, -50);
+            ctx.fill();
+            // Asas
+            ctx.fillStyle = '#660000';
+            ctx.beginPath();
+            ctx.moveTo(-40, 0);
+            ctx.lineTo(-80, -30);
+            ctx.lineTo(-40, 30);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(40, 0);
+            ctx.lineTo(80, -30);
+            ctx.lineTo(40, 30);
+            ctx.fill();
+            // Olhos amarelos
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.arc(-20, -15, 10, 0, Math.PI * 2);
+            ctx.arc(20, -15, 10, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // Default
+            ctx.fillRect(-size/2, -size/2, size, size);
+        }
+        
+        // Barra de HP do inimigo
+        ctx.restore();
+        const hpPercent = enemy.hp / enemy.maxHp;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(enemy.x - 25, enemy.y - size - 15, 50, 6);
+        ctx.fillStyle = hpPercent > 0.5 ? '#33ff6b' : hpPercent > 0.25 ? '#ffff00' : '#ff3333';
+        ctx.fillRect(enemy.x - 24, enemy.y - size - 14, 48 * hpPercent, 4);
+    });
+    
+    // Jogador
+    ctx.fillStyle = '#3399ff';
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 25, 0, Math.PI * 2);
+    ctx.fill();
+    // Aura
+    ctx.strokeStyle = 'rgba(51,153,255,0.5)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 30 + Math.sin(gameTime * 5) * 3, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Partículas
+    particles.forEach((p, idx) => {
+        p.x += p.vx * 0.016;
+        p.y += p.vy * 0.016;
+        p.life -= 0.03;
+        
+        if (p.life <= 0) {
+            particles.splice(idx, 1);
+            return;
+        }
+        
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size || 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    });
+    
+    ctx.restore();
+    
+    // Texto flutuante (sempre em screen space)
+    floatingTexts.forEach((ft, idx) => {
+        ft.y -= 1;
+        ft.life -= 0.02;
+        
+        if (ft.life <= 0) {
+            floatingTexts.splice(idx, 1);
+            return;
+        }
+        
+        const screenX = ft.x - player.x + canvas.width/2;
+        const screenY = ft.y - player.y + canvas.height/2;
+        
+        ctx.globalAlpha = ft.life;
+        ctx.fillStyle = ft.color;
+        ctx.font = `${ft.size || 16}px Arial`;
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 3;
+        ctx.strokeText(ft.text, screenX, screenY);
+        ctx.fillText(ft.text, screenX, screenY);
+        ctx.globalAlpha = 1;
+    });
+    
+    // Clima
+    if (weather === 'rain') {
+        ctx.strokeStyle = 'rgba(100,150,255,0.4)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 100; i++) {
+            const x = (Math.sin(i * 132 + gameTime * 2) * canvas.width + canvas.width) % canvas.width;
+            const y = (i * 37 + gameTime * 400) % canvas.height;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x - 5, y + 15);
+            ctx.stroke();
+        }
+    } else if (weather === 'snow') {
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        for (let i = 0; i < 80; i++) {
+            const x = (Math.sin(i * 132 + gameTime * 0.5) * canvas.width + canvas.width) % canvas.width;
+            const y = (i * 37 + gameTime * 50) % canvas.height;
+            ctx.beginPath();
+            ctx.arc(x, y, 2 + Math.sin(i) * 2, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
+    
+    // Mini-mapa
+    drawMinimap();
+    
+    // Mapa completo (se aberto)
+    if (document.getElementById('mapModal').style.display === 'flex') {
+        drawFullMap();
+    }
+}
+
+function getSkyColor() {
+    const hour = dayTime;
+    if (hour >= 6 && hour < 18) {
+        // Dia
+        return weather === 'rain' ? '#4a5568' : weather === 'snow' ? '#a0aec0' : '#87ceeb';
+    } else if (hour >= 18 && hour < 20) {
+        // Entardecer
+        return '#ff7f50';
+    } else {
+        // Noite
+        return weather === 'rain' ? '#1a1a2e' : '#0a0a1a';
+    }
+}
+
+function getGroundColor() {
+    return player.level < 5 ? '#2d5016' : 
+           player.level < 10 ? '#3d3d3d' : 
+           player.level < 15 ? '#c2b280' : 
+           player.level < 20 ? '#e8e8e8' : '#4a3728';
+}
+
+function drawMinimap() {
+    minimapCtx.fillStyle = getGroundColor();
+    minimapCtx.fillRect(0, 0, 160, 160);
+    
+    const scale = 0.15;
+    const cx = 80;
+    const cy = 80;
+    
+    // Jogador
+    minimapCtx.fillStyle = '#fff';
+    minimapCtx.beginPath();
+    minimapCtx.arc(cx, cy, 5, 0, Math.PI * 2);
+    minimapCtx.fill();
+    
+    // Inimigos
+    enemies.forEach(enemy => {
+        const ex = cx + (enemy.x - player.x) * scale;
+        const ey = cy + (enemy.y - player.y) * scale;
+        
+        if (ex >= 0 && ex <= 160 && ey >= 0 && ey <= 160) {
+            minimapCtx.fillStyle = enemy.boss ? '#ff0000' : '#ff8800';
+            minimapCtx.beginPath();
+            minimapCtx.arc(ex, ey, enemy.boss ? 6 : 3, 0, Math.PI * 2);
+            minimapCtx.fill();
+        }
+    });
 }
 
 function drawFullMap() {
-    const canvas = document.getElementById('fullMapCanvas');
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, 600, 600);
+    fullMapCtx.fillStyle = getGroundColor();
+    fullMapCtx.fillRect(0, 0, 800, 600);
     
-    // Bioma background
-    const biomeColors = ['#3ea55e', '#1a4a1a', '#c2b280', '#e8f4f8', '#4a2a2a'];
-    const biomeIndex = Math.min(Math.floor(player.level / 5), 4);
-    ctx.fillStyle = biomeColors[biomeIndex];
-    ctx.fillRect(0, 0, 600, 600);
+    const scale = 0.5;
+    const cx = 400;
+    const cy = 300;
     
-    // Grid
-    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-    for (let i = 0; i < 600; i += 50) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, 600);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(600, i);
-        ctx.stroke();
-    }
+    // Jogador
+    fullMapCtx.fillStyle = '#fff';
+    fullMapCtx.beginPath();
+    fullMapCtx.arc(cx, cy, 8, 0, Math.PI * 2);
+    fullMapCtx.fill();
     
-    // Player position (center)
-    const centerX = 300 + hero.position.x * 0.5;
-    const centerZ = 300 + hero.position.z * 0.5;
-    
-    // Monsters (atualização em tempo real)
-    monsters.forEach(m => {
-        const mx = 300 + m.position.x * 0.5;
-        const mz = 300 + m.position.z * 0.5;
-        if (mx > 0 && mx < 600 && mz > 0 && mz < 600) {
-            ctx.fillStyle = m.userData.isBoss ? '#ff0000' : '#ffaa00';
-            ctx.beginPath();
-            ctx.arc(mx, mz, m.userData.isBoss ? 6 : 3, 0, Math.PI * 2);
-            ctx.fill();
+    // Inimigos
+    enemies.forEach(enemy => {
+        const ex = cx + (enemy.x - player.x) * scale;
+        const ey = cy + (enemy.y - player.y) * scale;
+        
+        if (ex >= 0 && ex <= 800 && ey >= 0 && ey <= 600) {
+            fullMapCtx.fillStyle = enemy.boss ? '#ff0000' : '#ff8800';
+            fullMapCtx.beginPath();
+            fullMapCtx.arc(ex, ey, enemy.boss ? 10 : 5, 0, Math.PI * 2);
+            fullMapCtx.fill();
         }
     });
     
-    // Player
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = '#ffffff';
-    ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.arc(centerX, centerZ, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
+    document.getElementById('enemyCount').textContent = enemies.length;
+    document.getElementById('currentBiome').textContent = player.level < 5 ? 'Green Plains' : 
+                                                         player.level < 10 ? 'Dark Forest' : 
+                                                         player.level < 15 ? 'Golden Desert' : 
+                                                         player.level < 20 ? 'Frozen Snow' : 'Volcanic Lands';
 }
 
-// Atualizar mapa completo em tempo real
-setInterval(() => {
-    if (mapOpen) drawFullMap();
-}, 100);
+// ==================== UI ====================
 
-/* -------- ESTADO E MECÂNICAS ORIGINAIS RESTAURADAS -------- */
-
-/* -------- SISTEMA DE ACHIEVEMENTS -------- */
-let playerStats = {
-    totalKills: 0,
-    bossKills: 0,
-    itemsCollected: new Set(),
-    biomesVisited: [],
-    totalGold: 0
-};
-
-let achievements = [
-    { id: "firstBlood", name: "Primeiro Sangue ⚔️", desc: "Derrote seu primeiro monstro", unlocked: false, check: () => playerStats.totalKills >= 1 },
-    { id: "hunter", name: "Caçador 🎯", desc: "Derrote 10 monstros", unlocked: false, check: () => playerStats.totalKills >= 10 },
-    { id: "veteran", name: "Veterano 🛡️", desc: "Derrote 50 monstros", unlocked: false, check: () => playerStats.totalKills >= 50 },
-    { id: "explorer", name: "Explorador 🌍", desc: "Visite todos os biomas", unlocked: false, check: () => playerStats.biomesVisited.length >= 5 },
-    { id: "rich", name: "Rico 💰", desc: "Acumule 500 gold", unlocked: false, check: () => playerStats.totalGold >= 500 },
-    { id: "bossSlayer", name: "Boss Slayer 👹", desc: "Derrote um Boss", unlocked: false, check: () => playerStats.bossKills >= 1 },
-    { id: "level5", name: "Nível 5 ⭐", desc: "Atinga o nível 5", unlocked: false, check: () => player.level >= 5 },
-    { id: "collector", name: "Colecionador 📦", desc: "Encontre 10 tipos de itens", unlocked: false, check: () => playerStats.itemsCollected.size >= 10 }
-];
-
-function checkAchievements() {
-    achievements.forEach(ach => {
-        if(!ach.unlocked && ach.check()) {
-            ach.unlocked = true;
-            floatingText("🏆 " + ach.name, hero.position, "gold");
-            log("<span style='color:gold'>🏆 Achievement: " + ach.name + "</span>");
-            saveGame();
-        }
-    });
-    updateAchievementPanel();
+function updateUI() {
+    // Barras
+    document.getElementById('hpBar').style.width = `${(player.hp / player.maxHp) * 100}%`;
+    document.getElementById('hpText').textContent = `${Math.floor(player.hp)}/${player.maxHp}`;
+    
+    document.getElementById('spBar').style.width = `${(player.sp / player.maxSp) * 100}%`;
+    document.getElementById('spText').textContent = `${Math.floor(player.sp)}/${player.maxSp}`;
+    
+    document.getElementById('xpBar').style.width = `${(player.xp / player.maxXp) * 100}%`;
+    document.getElementById('xpText').textContent = `${Math.floor(player.xp)}/${player.maxXp}`;
+    
+    // Stats
+    document.getElementById('atkVal').textContent = player.atk;
+    document.getElementById('defVal').textContent = player.def;
+    document.getElementById('lvlVal').textContent = player.level;
+    document.getElementById('goldVal').textContent = player.gold;
+    document.getElementById('killsVal').textContent = player.kills;
+    
+    // Skill Bar
+    updateSkillBarUI();
 }
 
-const miniMapCanvas = document.getElementById('minimapCanvas');
-const ctxM = miniMapCanvas.getContext('2d');
-
-const lootTable=[
-    { name:"Iron Sword", slot:"weapon", atk:7, desc:"Lâmina de aço temperado." },
-    { name:"Knight Shield", slot:"shield", def:8, desc:"Proteção de cavalaria." },
-    { name:"Shadow Cape", slot:"cape", def:5, sp:20, desc:"Feita de sombras puras." },
-    { name:"Travel Boots", slot:"boots", def:2, speed:0.08, desc:"Aumenta velocidade." },
-    { name:"Ring of Power", slot:"ring", atk:5, desc:"Anel dourado brilhante." },
-    { name:"Ring of Life", slot:"ring", hp:30, desc:"Anel com gema azul." },
-    { name:"Health Potion", type:"consumable", heal:50, stackable:true, desc:"Recupera 50 HP" },
-    { name:"Super Potion", type:"consumable", heal:100, stackable:true, desc:"Recupera 100 HP" }
-];
-
-function log(m){ combatLog.innerHTML = `<div>${m}</div>` + combatLog.innerHTML; }
-
-/* -------- ENGINE 3D -------- */
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x87ceeb);
-const camera=new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 1000);
-const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(innerWidth, innerHeight);
-renderer.domElement.id = "gameCanvas";
-document.body.appendChild(renderer.domElement);
-
-scene.add(new THREE.AmbientLight(0xffffff, .7));
-let sun=new THREE.DirectionalLight(0xffffff, 1.2);
-sun.position.set(20,30,20);
-scene.add(sun);
-
-let ground=new THREE.Mesh(new THREE.PlaneGeometry(2000,2000), new THREE.MeshStandardMaterial({color:0x3ea55e}));
-ground.rotation.x=-Math.PI/2;
-scene.add(ground);
-
-/* -------- PERSONAGEM E VISUAIS -------- */
-let hero=new THREE.Group();
-let heroBody=new THREE.Mesh(new THREE.BoxGeometry(1,1.8,.8), new THREE.MeshStandardMaterial({color:0x3f7cff}));
-heroBody.position.y=1; hero.add(heroBody);
-let hair=new THREE.Mesh(new THREE.BoxGeometry(.9,.2,.8), new THREE.MeshStandardMaterial({color:0x2d160d}));
-hair.position.y=1.95; hero.add(hair);
-let hand=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.3,0.3), new THREE.MeshStandardMaterial({color:0xffdbac}));
-hand.position.set(0.6,1,0.4); hand.visible=false;
-hero.add(hand);
-scene.add(hero);
-
-let heroLabel=document.createElement("div");
-heroLabel.className="nameplate";
-heroLabel.innerHTML=`<span class='guild'>[Legends of Eldoria]</span><span class='playerName'>John Legend Lv.1</span><span class='title'>Dragon Slayer</span>`;
-document.body.appendChild(heroLabel);
-
-function applyEquipVisual(){
-    visuals.forEach(v=>hero.remove(v));
-    visuals=[];
-    if(equipped.weapon){
-        let w = new THREE.Group();
-        let blade=new THREE.Mesh(new THREE.BoxGeometry(.15,1.6,.15), new THREE.MeshStandardMaterial({color:0xf0f0f0}));
-        blade.position.y = 0.8; w.add(blade);
-        w.position.set(0.8, 1, 0.3); hero.add(w); visuals.push(w);
-    }
-    if(equipped.shield){
-        let s=new THREE.Mesh(new THREE.BoxGeometry(.9,1,.2), new THREE.MeshStandardMaterial({color:0x777}));
-        s.position.set(-0.9,1,0.2); hero.add(s); visuals.push(s);
-    }
-    if(equipped.cape){
-        let c=new THREE.Mesh(new THREE.BoxGeometry(1,1.7,.08), new THREE.MeshStandardMaterial({color:0x331144}));
-        c.position.set(0,0.85,-.45); hero.add(c); visuals.push(c);
-    }
-    if(equipped.boots){
-        let b1=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.3,0.5), new THREE.MeshStandardMaterial({color:0x331100}));
-        let b2=b1.clone(); b1.position.set(-0.3, 0.15, 0.1); b2.position.set(0.3, 0.15, 0.1);
-        hero.add(b1); hero.add(b2); visuals.push(b1,b2);
-    }
-    if(equipped.ring1){
-        let r1=new THREE.Mesh(new THREE.SphereGeometry(0.15), new THREE.MeshStandardMaterial({color:0xffd700, emissive:0xffaa00}));
-        r1.position.set(0.6, 1.2, 0.4); hero.add(r1); visuals.push(r1);
-    }
-    if(equipped.ring2){
-        let r2=new THREE.Mesh(new THREE.SphereGeometry(0.15), new THREE.MeshStandardMaterial({color:0x00d7ff, emissive:0x0055ff}));
-        r2.position.set(-0.6, 1.2, 0.4); hero.add(r2); visuals.push(r2);
-    }
-}
-
-function hpBar(){
-    let el=document.createElement("div");
-    el.style.cssText="position:fixed; width:50px; height:6px; background:#440000; pointer-events:none; border:1px solid black; z-index:3000;";
-    let fill=document.createElement("div");
-    fill.style.cssText="height:100%; background:#ff0000; width:100%;";
-    el.appendChild(fill); document.body.appendChild(el);
-    return {bar:el, fill};
-}
-
-function makeLabel(t){
-    let d=document.createElement("div");
-    d.className="nameplate"; d.style.fontSize="12px"; d.style.color="white";
-    document.body.appendChild(d); d.innerHTML=t; return d;
-}
-
-function spawnMonster(elite=false){
-    let sX = hero.position.x + (Math.random()-0.5)*150;
-    let sZ = hero.position.z + (Math.random()-0.5)*150;
-    let lv = elite ? 10 : player.level + Math.floor(Math.random()*3);
-    let size = elite ? 4 : 1.5;
-    
-    // Tipos de inimigos com formas e aparências distintas
-    const enemyTypes = [
-        { 
-            name: "Wolf", 
-            color: 0x9933ff, 
-            geo: "wolf",
-            desc: "Lobo selvagem das florestas"
-        },
-        { 
-            name: "Goblin", 
-            color: 0x228822, 
-            geo: "goblin",
-            desc: "Goblin verde e sorrateiro"
-        },
-        { 
-            name: "Skeleton", 
-            color: 0xdddddd, 
-            geo: "skeleton",
-            desc: "Esqueleto guerreiro"
-        },
-        { 
-            name: "Orc", 
-            color: 0x4a7c23, 
-            geo: "orc",
-            desc: "Orc brutamontes"
-        },
-        { 
-            name: "Demon", 
-            color: 0x8b0000, 
-            geo: "demon",
-            desc: "Demônio das trevas"
-        }
-    ];
-    
-    const typeIndex = Math.min(Math.floor(player.level / 5), enemyTypes.length - 1);
-    const type = enemyTypes[typeIndex];
-    
-    let geometry, material, mesh;
-    
-    // Criar geometria específica para cada tipo de inimigo
-    if (type.geo === "wolf") {
-        // Lobo - corpo alongado com cabeça
-        let body = new THREE.Group();
-        let mainBody = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 2), new THREE.MeshStandardMaterial({color: type.color}));
-        let head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshStandardMaterial({color: type.color}));
-        head.position.set(0, 0.3, -1.2);
-        let tail = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.8, 4), new THREE.MeshStandardMaterial({color: type.color}));
-        tail.rotation.x = Math.PI / 4;
-        tail.position.set(0, 0.2, 1.2);
-        body.add(mainBody, head, tail);
-        mesh = body;
-    } else if (type.geo === "goblin") {
-        // Goblin - corpo pequeno e curvado
-        let body = new THREE.Group();
-        let torso = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 1.2, 8), new THREE.MeshStandardMaterial({color: type.color}));
-        let head = new THREE.Mesh(new THREE.SphereGeometry(0.4), new THREE.MeshStandardMaterial({color: type.color}));
-        head.position.y = 0.8;
-        let nose = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 4), new THREE.MeshStandardMaterial({color: 0x44aa44}));
-        nose.position.set(0, 0.8, 0.35);
-        body.add(torso, head, nose);
-        mesh = body;
-    } else if (type.geo === "skeleton") {
-        // Esqueleto - ossos brancos
-        let body = new THREE.Group();
-        let spine = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1.4, 8), new THREE.MeshStandardMaterial({color: 0xeeeeee}));
-        let ribcage = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8, 0, Math.PI * 2, 0, 0.5), new THREE.MeshStandardMaterial({color: 0xeeeeee}));
-        ribcage.position.y = 0.4;
-        let skull = new THREE.Mesh(new THREE.SphereGeometry(0.3), new THREE.MeshStandardMaterial({color: 0xffffff}));
-        skull.position.y = 1.0;
-        let eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.05), new THREE.MeshStandardMaterial({color: 0xff0000, emissive: 0xff0000}));
-        eye1.position.set(-0.1, 1.0, 0.25);
-        let eye2 = eye1.clone();
-        eye2.position.set(0.1, 1.0, 0.25);
-        body.add(spine, ribcage, skull, eye1, eye2);
-        mesh = body;
-    } else if (type.geo === "orc") {
-        // Orc - grande e musculoso
-        let body = new THREE.Group();
-        let torso = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.6, 1), new THREE.MeshStandardMaterial({color: type.color}));
-        let head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), new THREE.MeshStandardMaterial({color: type.color}));
-        head.position.y = 1.1;
-        let tusk1 = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.4, 4), new THREE.MeshStandardMaterial({color: 0xffffff}));
-        tusk1.position.set(-0.2, 0.9, 0.35);
-        let tusk2 = tusk1.clone();
-        tusk2.position.set(0.2, 0.9, 0.35);
-        body.add(torso, head, tusk1, tusk2);
-        mesh = body;
-    } else if (type.geo === "demon") {
-        // Demônio - forma ameaçadora com chifres
-        let body = new THREE.Group();
-        let torso = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.8, 6), new THREE.MeshStandardMaterial({color: type.color, emissive: 0x330000}));
-        torso.position.y = 0.9;
-        let head = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5), new THREE.MeshStandardMaterial({color: 0x660000}));
-        head.position.y = 1.8;
-        let horn1 = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.6, 4), new THREE.MeshStandardMaterial({color: 0x333333}));
-        horn1.position.set(-0.3, 2.2, 0);
-        horn1.rotation.z = -0.3;
-        let horn2 = horn1.clone();
-        horn2.position.set(0.3, 2.2, 0);
-        horn2.rotation.z = 0.3;
-        let wings = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({color: 0x440000, side: THREE.DoubleSide}));
-        // Asas simples
-        let wingShape = new THREE.Shape();
-        wingShape.moveTo(0, 0);
-        wingShape.lineTo(1.5, 0.5);
-        wingShape.lineTo(0.5, 1.5);
-        wingShape.lineTo(0, 1);
-        let wingGeom = new THREE.ShapeGeometry(wingShape);
-        let leftWing = new THREE.Mesh(wingGeom, new THREE.MeshStandardMaterial({color: 0x440000}));
-        leftWing.position.set(-0.6, 1.2, 0);
-        leftWing.rotation.z = Math.PI;
-        let rightWing = leftWing.clone();
-        rightWing.position.set(0.6, 1.2, 0);
-        rightWing.rotation.z = 0;
-        body.add(torso, head, horn1, horn2, leftWing, rightWing);
-        mesh = body;
-    } else {
-        // Fallback - box simples
-        mesh = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), new THREE.MeshStandardMaterial({color: type.color}));
-    }
-    
-    // Boss é sempre vermelho e maior
-    if (elite) {
-        mesh.scale.set(2.5, 2.5, 2.5);
-        mesh.traverse(child => {
-            if (child.isMesh) {
-                child.material = new THREE.MeshStandardMaterial({color: 0xff0000, emissive: 0x330000});
-            }
-        });
-    }
-    
-    mesh.position.set(sX, size/2, sZ);
-    let hp = elite ? 1200 : 50 + (lv * 10);
-    mesh.userData={ name: elite?"BOSS "+type.name:type.name, level: lv, hp, maxHp: hp, xp: elite?500:20+(lv*5), atk: elite?25:5+(lv*2), isBoss: elite, lastAttack: 0, ui: hpBar(), label: makeLabel("") };
-    scene.add(mesh); monsters.push(mesh);
-}
-
-function killMonster(m){
-    player.xp += m.userData.xp;
-    
-    // Achievement tracking
-    playerStats.totalKills++;
-    if(m.userData.isBoss) playerStats.bossKills++;
-    
-    floatingText("+"+m.userData.xp+" XP", m.position, "lime");
-    if(Math.random()>.4){
-        let it = JSON.parse(JSON.stringify(lootTable[Math.floor(Math.random()*lootTable.length)]));
-        // Stacking para poções
-        if(it.stackable) {
-            let existing = inventory.find(i => i.name === it.name && i.stackable);
-            if(existing) {
-                existing.quantity = (existing.quantity || 1) + 1;
-                log("<span style='color:cyan'>Recebeu: "+it.name+" x"+existing.quantity+"</span>");
+function updateSkillBarUI() {
+    for (let i = 0; i < 10; i++) {
+        const slot = document.querySelector(`.skill-slot[data-slot="${i === 9 ? 0 : i + 1}"]`);
+        const skillKey = player.skillBar[i];
+        const iconEl = slot.querySelector('.skill-icon');
+        const cooldownEl = slot.querySelector('.skill-cooldown');
+        
+        if (skillKey && player.skills[skillKey]) {
+            const skillDef = SKILLS_DEF[skillKey];
+            iconEl.textContent = skillDef.icon;
+            slot.classList.add('has-skill');
+            
+            // Check cooldown
+            const now = Date.now();
+            if (skillCooldowns[skillKey] && now < skillCooldowns[skillKey]) {
+                const remaining = Math.ceil((skillCooldowns[skillKey] - now) / 1000);
+                cooldownEl.style.display = 'flex';
+                cooldownEl.textContent = remaining;
             } else {
-                it.quantity = 1;
-                inventory.push(it);
-                log("<span style='color:cyan'>Recebeu: "+it.name+"</span>");
+                cooldownEl.style.display = 'none';
             }
         } else {
-            inventory.push(it);
-            log("<span style='color:cyan'>Recebeu: "+it.name+"</span>");
+            iconEl.textContent = '';
+            slot.classList.remove('has-skill');
+            cooldownEl.style.display = 'none';
         }
-        // Track item type para achievement
-        playerStats.itemsCollected.add(it.name);
-    }
-    scene.remove(m); m.userData.ui.bar.remove(); m.userData.label.remove();
-    monsters.splice(monsters.indexOf(m),1);
-    checkLevel();
-    checkAchievements();
-}
-
-function checkLevel(){
-    if(player.xp >= player.next){
-        player.level++; player.xp=0; player.next *= 1.5;
-        let bonus = "";
-        let r = Math.random();
-        if(r < 0.25) { player.baseAtk += 5; bonus = "+5 ATK"; }
-        else if(r < 0.5) { player.baseDef += 4; bonus = "+4 DEF"; }
-        else if(r < 0.75) { player.maxHp += 40; bonus = "+40 HP"; }
-        else { player.maxSp += 30; bonus = "+30 SP"; }
-        player.hp = player.maxHp; player.sp = player.maxSp;
-        player.skillPoints += 2; // Ganha 2 skill points por nível
-        heroLabel.querySelector(".playerName").innerHTML="John Legend Lv."+player.level;
-        floatingText("LEVEL UP! " + bonus, hero.position, "gold");
-        playSound('levelup');
-        recalcStats();
-        checkAchievements();
-        checkBiomeChange();
-        updateSkillTreeUI();
-        saveGame();
     }
 }
 
-/* -------- SISTEMA DE BIOMAS -------- */
-let biomes = [
-    { name: "Green Plains", minLevel: 1, groundColor: 0x3ea55e, skyColor: 0x87ceeb, fogColor: 0x87ceeb },
-    { name: "Dark Forest", minLevel: 5, groundColor: 0x2d5a2d, skyColor: 0x4a4a6a, fogColor: 0x3a3a5a },
-    { name: "Golden Desert", minLevel: 10, groundColor: 0xd4a84b, skyColor: 0xffd7a8, fogColor: 0xffd7a8 },
-    { name: "Frozen Snow", minLevel: 15, groundColor: 0xe8e8e8, skyColor: 0xb8d4e8, fogColor: 0xb8d4e8 },
-    { name: "Volcanic Lands", minLevel: 20, groundColor: 0x8b0000, skyColor: 0xff4500, fogColor: 0xff4500 }
-];
-
-let currentBiome = 0;
-
-function checkBiomeChange(){
-    let newBiome = biomes.findIndex(b => player.level >= b.minLevel && 
-                                          player.level < (biomes[biomes.indexOf(b)+1]?.minLevel || 999));
-    if(newBiome !== currentBiome && newBiome !== -1) {
-        currentBiome = newBiome;
-        let biome = biomes[currentBiome];
+function renderSkillsModal() {
+    const grid = document.getElementById('skillsGrid');
+    grid.innerHTML = '';
+    
+    Object.keys(SKILLS_DEF).forEach(key => {
+        const skill = SKILLS_DEF[key];
+        const playerSkill = player.skills[key] || { level: 0, unlocked: key === 'fireball' };
         
-        // Mudar cores
-        ground.material.color.setHex(biome.groundColor);
-        scene.background.setHex(biome.skyColor);
-        scene.fog = new THREE.Fog(biome.fogColor, 50, 150);
+        const card = document.createElement('div');
+        card.className = 'skill-card';
+        card.dataset.skill = key;
+        card.draggable = playerSkill.unlocked;
         
-        floatingText("📍 " + biome.name, hero.position, "cyan");
-        log("<span style='color:cyan'>Chegou em: " + biome.name + "</span>");
+        const damageText = skill.baseDamage < 0 ? `Cura: ${Math.abs(skill.baseDamage)}` : 
+                          skill.baseDamage > 0 ? `Dano: ${skill.baseDamage}` : 'Passiva';
         
-        // Track achievement
-        if(!playerStats.biomesVisited.includes(biome.name)) {
-            playerStats.biomesVisited.push(biome.name);
-            checkAchievements();
-        }
-    }
-}
-
-function castFireball(){
-    if(player.sp < 25){ log("SP insuficiente!"); return; }
-    const now = Date.now();
-    if (now - skillCooldowns.fireball < 1000) { log("Skill em cooldown!"); return; }
-    skillCooldowns.fireball = now;
-    player.sp -= 25;
-    playSound('fireball');
-    let fbLevel = getSkillLevel("fireball");
-    let fbSize = 0.6 + (fbLevel * 0.15);
-    let fbIntensity = Math.min(1.0, 0.2 + (fbLevel * 0.2));
-    let fb = new THREE.Mesh(new THREE.SphereGeometry(fbSize), new THREE.MeshStandardMaterial({color:0xff4400, emissive:0xff0000, emissiveIntensity: 1.0 + fbLevel}));
-    fb.position.copy(hero.position).y = 1.2;
-    scene.add(fb);
-    fireballs.push({ mesh: fb, dir: lastDir.clone().normalize(), life: 80, type: "fire", damage: Math.floor(40 * (1 + getSkillLevel("fireball") * 0.3)) });
-    updateSkillHotbar();
-}
-
-function castIceBlast(){
-    if(player.sp < 30){ log("SP insuficiente!"); return; }
-    const now = Date.now();
-    if (now - skillCooldowns.iceblast < 1500) { log("Skill em cooldown!"); return; }
-    skillCooldowns.iceblast = now;
-    player.sp -= 30;
-    playSound('ice');
-    let iceLevel = getSkillLevel("iceblast");
-    let iceSize = 0.5 + (iceLevel * 0.12);
-    let ice = new THREE.Mesh(new THREE.SphereGeometry(iceSize), new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x0088ff, emissiveIntensity: 1.0 + iceLevel}));
-    ice.position.copy(hero.position).y = 1.2;
-    scene.add(ice);
-    fireballs.push({ mesh: ice, dir: lastDir.clone().normalize(), life: 80, type: "ice", damage: Math.floor(35 * (1 + getSkillLevel("iceblast") * 0.3)) });
-    updateSkillHotbar();
-}
-
-function castThunderStrike(){
-    if(player.sp < 35){ log("SP insuficiente!"); return; }
-    const now = Date.now();
-    if (now - skillCooldowns.thunder < 3000) { log("Skill em cooldown!"); return; }
-    skillCooldowns.thunder = now;
-    player.sp -= 35;
-    playSound('thunder');
-    
-    // Dano em área ao redor do jogador
-    monsters.forEach(m => {
-        if(hero.position.distanceTo(m.position) < 8) {
-            m.userData.hp -= 80;
-            floatingText("-80", m.position, "yellow");
-            playSound('hit');
-            if(m.userData.hp <= 0) killMonster(m);
-        }
-    });
-    
-    // Efeito visual de raio
-    let lightning = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.2, 0.5, 20, 8),
-        new THREE.MeshStandardMaterial({color: 0xffff00, emissive: 0xffaa00, transparent: true, opacity: 0.8})
-    );
-    lightning.position.copy(hero.position).y = 10;
-    lightning.rotation.x = Math.PI;
-    scene.add(lightning);
-    setTimeout(() => scene.remove(lightning), 200);
-    
-    floatingText("⚡ THUNDER!", hero.position, "yellow");
-    updateSkillHotbar();
-}
-
-function usePotion(){
-    let potionIndex = inventory.findIndex(i => i.type === "consumable");
-    if(potionIndex === -1) { log("<span style='color:orange'>Sem poções!</span>"); return; }
-    
-    let potion = inventory[potionIndex];
-    player.hp = Math.min(player.maxHp + (equipped.ring1?.hp||0) + (equipped.ring2?.hp||0), player.hp + potion.heal);
-    floatingText("+" + potion.heal + " HP", hero.position, "green");
-    log("<span style='color:green'>Usou " + potion.name + "</span>");
-    
-    if(!potion.stackable || potion.quantity <= 1) {
-        inventory.splice(potionIndex, 1);
-    } else {
-        potion.quantity--;
-    }
-    updatePanels();
-}
-
-function attack(){
-    if(isAttacking) return;
-    isAttacking = true; hand.visible = true;
-    playSound('attack');
-    let t = 0;
-    let anim = setInterval(()=>{
-        t += 0.3; hand.position.z = 0.4 + Math.sin(t)*0.8;
-        if(t >= Math.PI){ clearInterval(anim); hand.visible=false; hand.position.z=0.4; isAttacking=false; }
-    }, 20);
-    monsters.forEach(m => {
-        if(hero.position.distanceTo(m.position) < 4.5){
-            let dmg = player.atk + Math.floor(Math.random()*5);
-            m.userData.hp -= dmg; floatingText("-"+dmg, m.position, "orange");
-            playSound('hit');
-            if(m.userData.hp <= 0) killMonster(m);
-        }
-    });
-}
-
-/* -------- JOYSTICK LOGIC -------- */
-let joyStickVector = { x: 0, y: 0 };
-let isJoyactive = false;
-const joyArea = document.getElementById('joystickArea');
-const joyStick = document.getElementById('joystickStick');
-
-function handleJoy(e) {
-    if (!isJoyactive) return;
-    const touch = e.touches ? e.touches[0] : e;
-    const rect = joyArea.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dx = touch.clientX - cx;
-    const dy = touch.clientY - cy;
-    const dist = Math.min(Math.sqrt(dx*dx + dy*dy), 45);
-    const angle = Math.atan2(dy, dx);
-    
-    joyStickVector.x = Math.cos(angle) * (dist/45);
-    joyStickVector.y = Math.sin(angle) * (dist/45);
-    
-    joyStick.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
-}
-
-joyArea.addEventListener('touchstart', e => { isJoyactive = true; handleJoy(e); });
-window.addEventListener('touchmove', e => { if(isJoyactive) { handleJoy(e); e.preventDefault(); } }, {passive: false});
-window.addEventListener('touchend', () => { 
-    isJoyactive = false; 
-    joyStickVector = { x: 0, y: 0 }; 
-    joyStick.style.transform = `translate(0,0)`;
-});
-
-/* Mobile Buttons */
-document.getElementById('btnAtk').addEventListener('touchstart', (e) => { e.preventDefault(); attack(); });
-document.getElementById('btnSkill').addEventListener('touchstart', (e) => { e.preventDefault(); useFireball(); });
-document.getElementById('btnIce').addEventListener('touchstart', (e) => { e.preventDefault(); useIceBlast(); });
-document.getElementById('btnThunder').addEventListener('touchstart', (e) => { e.preventDefault(); useThunderStrike(); });
-document.getElementById('btnPotion').addEventListener('touchstart', (e) => { e.preventDefault(); usePotion(); });
-document.getElementById('btnInv').addEventListener('touchstart', (e) => { e.preventDefault(); toggleV(); });
-document.getElementById('btnShop').addEventListener('touchstart', (e) => { e.preventDefault(); toggleShop(); });
-document.getElementById('btnAchv').addEventListener('touchstart', (e) => { e.preventDefault(); toggleAchievements(); });
-
-/* -------- UI E LOJA -------- */
-function recalcStats(){
-    let bAtk=0, bDef=0, bHp=0, bSp=0;
-    for(let k in equipped) if(equipped[k]){
-        bAtk += (equipped[k].atk || 0); bDef += (equipped[k].def || 0);
-        bHp += (equipped[k].hp || 0); bSp += (equipped[k].sp || 0);
-    }
-    player.atk = player.baseAtk + bAtk; player.def = player.baseDef + bDef;
-}
-
-function updatePanels(){
-    statsPanel.innerHTML=`LVL ${player.level} | ATK ${player.atk} | DEF ${player.def} | Gold: ${player.gold}`;
-    equippedPanel.innerHTML="";
-    for(let k in equipped) equippedPanel.innerHTML+=`<div class='item' onclick="unequip('${k}')">${k.toUpperCase()}: ${equipped[k]?equipped[k].name:'Vazio'}</div>`;
-    inventoryPanel.innerHTML="";
-    
-    // Agrupar itens iguais e mostrar atributos
-    let groupedItems = {};
-    inventory.forEach((it, i) => {
-        let key = it.name + (it.stackable ? '_stack' : '_' + i);
-        if (!groupedItems[key]) {
-            groupedItems[key] = { item: it, indices: [i], quantity: it.quantity || 1 };
-        } else {
-            groupedItems[key].indices.push(i);
-            if (it.stackable && it.quantity) {
-                groupedItems[key].quantity += it.quantity;
-            }
-        }
-    });
-    
-    for (let key in groupedItems) {
-        let data = groupedItems[key];
-        let it = data.item;
-        let qty = data.quantity > 1 ? ` <span style="color:cyan">x${data.quantity}</span>` : '';
-        let attrs = [];
-        if (it.atk) attrs.push(`<span style="color:#ff6b6b">+${it.atk} ATK</span>`);
-        if (it.def) attrs.push(`<span style="color:#4ecdc4">+${it.def} DEF</span>`);
-        if (it.hp) attrs.push(`<span style="color:#2ecc71">+${it.hp} HP</span>`);
-        if (it.sp) attrs.push(`<span style="color:#3498db">+${it.sp} SP</span>`);
-        if (it.speed) attrs.push(`<span style="color:#f39c12">🏃 Speed</span>`);
-        let attrText = attrs.length > 0 ? `<br><small>${attrs.join(' | ')}</small>` : '';
-        let equipBtn = it.slot ? `<button style="background:#27ae60;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;" onclick="equip(${data.indices[0]})">Equipar</button>` : '';
-        inventoryPanel.innerHTML+=`<div class='item' style="flex-direction:column;align-items:flex-start;"><div><b>${it.name}</b> [${it.slot || 'consumable'}]${qty}${attrText}</div><div style="margin-top:5px;">${equipBtn}</div></div>`;
-    }
-    
-    shopInventoryPanel.innerHTML="";
-    inventory.forEach((it,i)=> {
-        // Só mostra itens não equipados para venda
-        let isEquipped = Object.values(equipped).includes(it);
-        if (!isEquipped) {
-            let qty = it.stackable && it.quantity > 1 ? ` <span style="color:cyan">x${it.quantity}</span>` : '';
-            let attrs = [];
-            if (it.atk) attrs.push(`<span style="color:#ff6b6b;font-size:10px;">+${it.atk} ATK</span>`);
-            if (it.def) attrs.push(`<span style="color:#4ecdc4;font-size:10px;">+${it.def} DEF</span>`);
-            if (it.hp) attrs.push(`<span style="color:#2ecc71;font-size:10px;">+${it.hp} HP</span>`);
-            let attrText = attrs.length > 0 ? `<br>${attrs.join(' ')}` : '';
-            shopInventoryPanel.innerHTML+=`<div class='item' style="flex-direction:column;align-items:flex-start;"><span>${it.name}${qty}${attrText}</span><button class='sell-btn' onclick='sellItem(${i})'>Vender (25G)</button></div>`;
-        }
-    });
-    
-    // Update gold display and track for achievement
-    goldDisplay.innerText = "Gold: " + player.gold;
-    if(player.gold > playerStats.totalGold) playerStats.totalGold = player.gold;
-}
-
-function sellItem(i){ player.gold += 25; inventory.splice(i,1); updatePanels(); }
-function equip(i){
-    let it=inventory[i]; let s = it.slot;
-    if(s === "ring") s = !equipped.ring1 ? "ring1" : "ring2";
-    equipped[s]=it; recalcStats(); applyEquipVisual(); updatePanels();
-}
-function unequip(k){ equipped[k]=null; recalcStats(); applyEquipVisual(); updatePanels(); }
-function toggleV(){ statusWindow.style.display = statusWindow.style.display==="block"?"none":"block"; updatePanels(); }
-function toggleShop(){ shopWindow.style.display = shopWindow.style.display==="block"?"none":"block"; updatePanels(); }
-
-/* -------- SISTEMA DE ACHIEVEMENTS UI -------- */
-let achievementWindowDisplayed = false;
-function toggleAchievements() {
-    achievementWindowDisplayed = !achievementWindowDisplayed;
-    let win = document.getElementById('achievementWindow');
-    if(win) {
-        win.style.display = achievementWindowDisplayed ? "block" : "none";
-        updateAchievementPanel();
-    }
-}
-
-function updateAchievementPanel() {
-    let panel = document.getElementById('achievementList');
-    if(!panel) return;
-    panel.innerHTML = "";
-    achievements.forEach(ach => {
-        let status = ach.unlocked ? "✅" : "🔒";
-        let color = ach.unlocked ? "#2ecc71" : "#666";
-        panel.innerHTML += `
-            <div class='item' style="background:${ach.unlocked ? '#1a4a2e' : '#17304e'}">
-                <div style="color:${color}">
-                    <b>${ach.name}</b><br>
-                    <small>${ach.desc}</small>
-                </div>
-                <span>${status}</span>
-            </div>
+        card.innerHTML = `
+            <div class="skill-level">Nvl ${playerSkill.level}</div>
+            <h4>${skill.icon} ${skill.name}</h4>
+            <p>${skill.description}</p>
+            <p class="skill-damage">${damageText}</p>
+            <p class="skill-cost">${skill.passive ? 'Passiva' : 'SP: ' + skill.baseCost}</p>
+            ${!playerSkill.unlocked ? '<p style="color:#666;">🔒 Bloqueado</p>' : ''}
         `;
+        
+        if (playerSkill.unlocked && playerSkill.level < 5) {
+            card.addEventListener('click', () => upgradeSkill(key));
+        }
+        
+        grid.appendChild(card);
     });
+    
+    document.getElementById('spAvailable').textContent = player.skillPoints;
+    initDragDrop();
 }
 
-function saveGame() {
-    let saveData = {
-        player: player,
-        inventory: inventory,
-        equipped: equipped,
-        playerStats: { ...playerStats, itemsCollected: Array.from(playerStats.itemsCollected) },
-        achievements: achievements,
-        biomesVisited: playerStats.biomesVisited,
-        skillTree: skillTree
+function upgradeSkill(key) {
+    if (player.skillPoints <= 0) {
+        showNotification('❌ Sem Skill Points!');
+        return;
+    }
+    
+    if (!player.skills[key]) {
+        player.skills[key] = { level: 1, unlocked: true };
+    } else if (player.skills[key].level >= 5) {
+        showNotification('❌ Nível máximo atingido!');
+        return;
+    }
+    
+    player.skills[key].level++;
+    player.skillPoints--;
+    playSound('levelup');
+    showNotification(`✨ ${SKILLS_DEF[key].name} melhorada para Nível ${player.skills[key].level}!`);
+    renderSkillsModal();
+}
+
+function renderInventory() {
+    const invGrid = document.getElementById('inventoryGrid');
+    const eqGrid = document.getElementById('equipmentGrid');
+    
+    // Agrupar itens iguais
+    const groupedInv = {};
+    player.inventory.forEach(item => {
+        const key = `${item.icon}-${item.name}`;
+        if (!groupedInv[key]) {
+            groupedInv[key] = { ...item, qty: 0 };
+        }
+        groupedInv[key].qty++;
+    });
+    
+    // Inventário
+    invGrid.innerHTML = '';
+    Object.values(groupedInv).forEach((item, idx) => {
+        const slot = document.createElement('div');
+        slot.className = 'inv-slot';
+        slot.innerHTML = `
+            <div class="inv-icon">${item.icon}</div>
+            <div class="inv-qty">${item.qty}</div>
+            <div class="inv-name">${item.name}</div>
+        `;
+        slot.onclick = () => equipItem(idx);
+        invGrid.appendChild(slot);
+    });
+    
+    // Equipamento
+    eqGrid.innerHTML = '';
+    const eqSlots = ['weapon', 'armor', 'helmet', 'boots', 'ring'];
+    const eqIcons = { weapon: '🗡️', armor: '🛡️', helmet: '🪖', boots: '👢', ring: '💍' };
+    
+    eqSlots.forEach(slot => {
+        const div = document.createElement('div');
+        div.className = 'inv-slot';
+        if (player.equipment[slot]) {
+            div.classList.add('equipped');
+            div.innerHTML = `
+                <div class="inv-icon">${eqIcons[slot]}</div>
+                <div class="inv-name">${slot}</div>
+            `;
+            div.onclick = () => unequipItem(slot);
+        } else {
+            div.innerHTML = `<div class="inv-icon" style="opacity:0.3">${eqIcons[slot]}</div>`;
+        }
+        eqGrid.appendChild(div);
+    });
+    
+    // Atributos
+    document.getElementById('modalAtk').textContent = player.atk;
+    document.getElementById('modalDef').textContent = player.def;
+    document.getElementById('modalHp').textContent = player.maxHp;
+}
+
+function equipItem(invIdx) {
+    // Simplificado: apenas move para equipamento
+    const item = player.inventory[invIdx];
+    const slots = ['weapon', 'armor', 'helmet', 'boots', 'ring'];
+    const randomSlot = slots[Math.floor(Math.random() * slots.length)];
+    
+    if (player.equipment[randomSlot]) {
+        player.inventory.push(player.equipment[randomSlot]);
+    }
+    
+    player.equipment[randomSlot] = item;
+    player.inventory.splice(invIdx, 1);
+    
+    // Recalcular stats
+    recalcStats();
+    
+    playSound('coin');
+    showNotification(`📦 ${item.name} equipado!`);
+    renderInventory();
+}
+
+function unequipItem(slot) {
+    player.inventory.push(player.equipment[slot]);
+    player.equipment[slot] = null;
+    recalcStats();
+    playSound('coin');
+    showNotification(`📦 Item desequipado!`);
+    renderInventory();
+}
+
+function recalcStats() {
+    // Base stats
+    let atk = 10 + (player.level - 1) * 3;
+    let def = 5 + (player.level - 1) * 2;
+    let maxHp = 100 + (player.level - 1) * 20;
+    
+    // Bonus de equipamentos (simplificado)
+    Object.values(player.equipment).forEach(item => {
+        if (item) {
+            atk += 5;
+            def += 3;
+            maxHp += 30;
+        }
+    });
+    
+    // Passivas
+    if (player.skills.fortitude && player.skills.fortitude.level > 0) {
+        maxHp *= 1 + player.skills.fortitude.level * 0.1;
+    }
+    if (player.skills.might && player.skills.might.level > 0) {
+        atk *= 1 + player.skills.might.level * 0.1;
+    }
+    
+    player.atk = Math.floor(atk);
+    player.def = Math.floor(def);
+    player.maxHp = Math.floor(maxHp);
+    if (player.hp > player.maxHp) player.hp = player.maxHp;
+}
+
+// ==================== UTILITÁRIOS ====================
+
+function toggleModal(id) {
+    const modal = document.getElementById(id);
+    const isShowing = modal.style.display === 'flex';
+    
+    // Fechar todos
+    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    
+    if (!isShowing) {
+        modal.style.display = 'flex';
+        if (id === 'skillsModal') renderSkillsModal();
+        if (id === 'characterModal') renderInventory();
+    }
+}
+
+function toggleMap() {
+    const modal = document.getElementById('mapModal');
+    if (modal.style.display === 'flex') {
+        modal.style.display = 'none';
+    } else {
+        modal.style.display = 'flex';
+    }
+}
+
+function togglePause() {
+    isPaused = !isPaused;
+    document.getElementById('pauseMenu').style.display = isPaused ? 'flex' : 'none';
+}
+
+function showNotification(text) {
+    const notif = document.createElement('div');
+    notif.className = 'notification';
+    notif.textContent = text;
+    document.body.appendChild(notif);
+    
+    setTimeout(() => {
+        notif.style.animation = 'slideDown 0.3s ease-out reverse';
+        setTimeout(() => notif.remove(), 300);
+    }, 2000);
+}
+
+function addFloatingText(x, y, text, color, size) {
+    floatingTexts.push({ x, y, text, color, life: 1.5, size: size || 16 });
+}
+
+// ==================== SAVE/LOAD ====================
+
+function saveGame(showNotif = false) {
+    const saveData = {
+        player: { ...player },
+        skillCooldowns,
+        gameTime
     };
     localStorage.setItem('eldoriaSave', JSON.stringify(saveData));
+    if (showNotif) showNotification('💾 Jogo salvo!');
 }
 
 function loadGame() {
-    let saved = localStorage.getItem('eldoriaSave');
-    if(saved) {
-        let data = JSON.parse(saved);
+    const saveData = localStorage.getItem('eldoriaSave');
+    if (saveData) {
+        const data = JSON.parse(saveData);
         Object.assign(player, data.player);
-        inventory = data.inventory || [];
-        equipped = data.equipped || {};
-        if(data.playerStats) {
-            playerStats.totalKills = data.playerStats.totalKills || 0;
-            playerStats.bossKills = data.playerStats.bossKills || 0;
-            playerStats.itemsCollected = new Set(data.playerStats.itemsCollected || []);
-            playerStats.biomesVisited = data.biomesVisited || [];
-            playerStats.totalGold = data.playerStats.totalGold || 0;
-        }
-        if(data.achievements) achievements = data.achievements;
-        if(data.skillTree) skillTree = data.skillTree;
-        
-        // Restore visual state
-        heroLabel.querySelector(".playerName").innerHTML = "John Legend Lv." + player.level;
+        Object.assign(skillCooldowns, data.skillCooldowns || {});
+        gameTime = data.gameTime || 0;
         recalcStats();
-        applyEquipVisual();
-        checkBiomeChange();
-        updateSkillTreeUI();
-        log("<span style='color:green'>Jogo carregado com sucesso!</span>");
-    } else {
-        updateSkillTreeUI();
+        showNotification('💾 Jogo carregado!');
+        return true;
     }
+    return false;
 }
 
-function floatingText(txt,pos,color){
-    let d=document.createElement("div"); d.style.position="fixed"; d.style.color=color; d.style.fontWeight="bold"; d.style.zIndex="6000";
-    document.body.appendChild(d); floatTexts.push({div:d, pos:pos.clone(), life:60, txt});
-}
+// Auto-save
+setInterval(() => saveGame(), 30000);
 
-/* -------- LOOP DE JOGO -------- */
-function animate(time){
-    requestAnimationFrame(animate);
+// ==================== LOOP PRINCIPAL ====================
+
+function gameLoop(timestamp) {
+    const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+    lastTime = timestamp;
     
-    // Se estiver pausado, não atualiza lógica do jogo (apenas renderiza)
-    if (isPaused) {
-        renderer.render(scene, camera);
-        return;
+    if (!isPaused) {
+        update(dt);
     }
-
-    let move = new THREE.Vector3(0,0,0);
-    // Teclado
-    if(keys.w) move.z -= 1; if(keys.s) move.z += 1;
-    if(keys.a) move.x -= 1; if(keys.d) move.x += 1;
-    // Joystick Mobile
-    if(isJoyactive){ move.x = joyStickVector.x; move.z = joyStickVector.y; }
-
-    if(move.length() > 0.05){
-        let speed = 0.35 + (equipped.boots ? equipped.boots.speed : 0);
-        move.normalize().multiplyScalar(speed);
-        hero.position.add(move); lastDir.copy(move);
-        hero.rotation.y = Math.atan2(move.x, move.z);
-    }
-
-    if(time - lastSpawnTime > 2500){ if(monsters.length < 15) spawnMonster(Math.random()>0.97); lastSpawnTime = time; }
-    player.sp = Math.min(player.maxSp + (equipped.cape?.sp||0), player.sp+0.1);
-
-    // Fireball
-    for(let i=fireballs.length-1; i>=0; i--){
-        let f = fireballs[i]; f.mesh.position.add(f.dir.clone().multiplyScalar(0.8)); f.life--;
-        monsters.forEach(m=>{
-            if(f.mesh.position.distanceTo(m.position)<3.5){
-                let dmg = f.damage || 40;
-                m.userData.hp -= dmg; 
-                floatingText("-"+dmg, m.position, f.type === "ice" ? "cyan" : (f.type === "fire" ? "red" : "yellow")); 
-                f.life=0;
-                if(m.userData.hp <= 0) killMonster(m);
-            }
-        });
-        if(f.life<=0){ scene.remove(f.mesh); fireballs.splice(i,1); }
-    }
-
-    // Monstros
-    monsters.forEach((m)=>{
-        let d = hero.position.distanceTo(m.position);
-        if (d <= 1000) {
-            m.visible = true;
-            if(d < 40) m.position.add(new THREE.Vector3().subVectors(hero.position, m.position).normalize().multiplyScalar(0.06));
-            if(d < 2.6 && time - m.userData.lastAttack > 1500){
-                let dmg = Math.max(1, m.userData.atk-player.def);
-                player.hp -= dmg; m.userData.lastAttack=time; floatingText("-"+dmg, hero.position, "red");
-                if(player.hp<=0){ player.hp=player.maxHp; hero.position.set(0,0,0); log("Ressuscitado!"); }
-            }
-            let v=m.position.clone().project(camera);
-            if(v.z < 1){
-                m.userData.ui.bar.style.display = "block"; m.userData.label.style.display = "block";
-                let x=(v.x*.5+.5)*innerWidth, y=(-v.y*.5+.5)*innerHeight;
-                m.userData.ui.bar.style.left=(x-25)+"px"; m.userData.ui.bar.style.top=(y-28)+"px";
-                m.userData.ui.fill.style.width=(m.userData.hp/m.userData.maxHp*100)+"%";
-                m.userData.label.style.left=(x-45)+"px"; m.userData.label.style.top=(y-48)+"px";
-                m.userData.label.innerHTML=`${m.userData.name} Lv.${m.userData.level}`;
-            } else { m.userData.ui.bar.style.display = "none"; m.userData.label.style.display = "none"; }
-        } else { m.visible = false; m.userData.ui.bar.style.display = "none"; m.userData.label.style.display = "none"; }
-    });
-
-    floatTexts.forEach((f,i)=>{
-        f.pos.y+=.05; let v=f.pos.clone().project(camera);
-        f.div.style.left=(v.x*.5+.5)*innerWidth+"px"; f.div.style.top=(-v.y*.5+.5)*innerHeight+"px";
-        f.div.innerHTML=f.txt; if(--f.life<=0){ f.div.remove(); floatTexts.splice(i,1); }
-    });
-
-    let hv=hero.position.clone().project(camera);
-    heroLabel.style.left=((hv.x*.5+.5)*innerWidth-65)+"px"; heroLabel.style.top=((-hv.y*.5+.5)*innerHeight-85)+"px";
-
-    camera.position.set(hero.position.x, 14, hero.position.z+14);
-    camera.lookAt(hero.position);
-    renderer.render(scene, camera);
-
-    hp.style.width=(player.hp/(player.maxHp+(equipped.ring1?.hp||0)+(equipped.ring2?.hp||0))*100)+"%";
-    sp.style.width=(player.sp/(player.maxSp+(equipped.cape?.sp||0))*100)+"%";
-    xp.style.width=(player.xp/player.next*100)+"%";
-    goldDisplay.innerText = "Gold: " + player.gold;
-
-    // MINI-MAPA
-    ctxM.clearRect(0, 0, 180, 180);
-    ctxM.fillStyle = "rgba(0, 40, 20, 0.7)"; ctxM.fillRect(0,0,180,180);
-    const centerX = 90, centerZ = 90, mapScale = 1.3;
-    monsters.forEach(m => {
-        const dist = m.position.distanceTo(hero.position);
-        if (dist <= 1000) {
-            const mx = centerX + (m.position.x - hero.position.x) * mapScale;
-            const mz = centerZ + (m.position.z - hero.position.z) * mapScale;
-            if(Math.sqrt((mx-90)**2 + (mz-90)**2) < 70) {
-                ctxM.fillStyle = m.userData.isBoss ? "#ff0000" : "#ffaa00";
-                ctxM.beginPath(); ctxM.arc(mx, mz, 3, 0, Math.PI*2); ctxM.fill();
-            }
-        }
-    });
-    ctxM.fillStyle = "white"; ctxM.beginPath(); ctxM.arc(centerX, centerZ, 4, 0, Math.PI*2); ctxM.fill();
+    draw();
+    
+    requestAnimationFrame(gameLoop);
 }
 
-window.onkeydown=e=>{ keys[e.key.toLowerCase()]=true; 
-    if(e.code==="Space") attack();
-    if(e.key.toLowerCase()==="z") useFireball();
-    if(e.key.toLowerCase()==="x") useIceBlast();
-    if(e.key.toLowerCase()==="c") useThunderStrike();
-    if(e.key.toLowerCase()==="q") usePotion();
-    if(e.key.toLowerCase()==="v") toggleV();
-    if(e.key.toLowerCase()==="e") toggleShop();
-    if(e.key.toLowerCase()==="h") toggleAchievements();
-    if(e.key.toLowerCase()==="y") toggleSkillTree();
-    if(e.key.toLowerCase()==="m") toggleMap();
-    if(e.key.toLowerCase()==="p") togglePause();
-    if(e.key.toLowerCase()==="f") document.documentElement.requestFullscreen();
-};
-window.onkeyup=e=>keys[e.key.toLowerCase()]=false;
+// ==================== INICIALIZAÇÃO ====================
 
-window.addEventListener('resize', () => {
-    camera.aspect = innerWidth / innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
-});
+// Unlocks Fireball inicial
+player.skills.fireball = { level: 1, unlocked: true };
 
-// Mobile button events
-document.getElementById('btnPause').addEventListener('touchstart', (e) => { e.preventDefault(); togglePause(); });
-document.getElementById('btnMap').addEventListener('touchstart', (e) => { e.preventDefault(); toggleMap(); });
-document.getElementById('btnSkillTree').addEventListener('touchstart', (e) => { e.preventDefault(); toggleSkillTree(); });
+// Load ou start
+if (!loadGame()) {
+    showNotification('🎮 Bem-vindo a Eldoria! Use WASD/Setas para mover');
+}
 
-animate();
-log("Eldoria V14 - Complete!");
-log("<span style='color:cyan'>Novidades: Skills Tree (Y), Mapa (M), Pause (P), Sons, Save/Load!</span>");
+// Start loop
+requestAnimationFrame(gameLoop);
 
-// Load game on start
-loadGame();
+// Initial spawn
+for (let i = 0; i < 5; i++) spawnEnemy();
 
-// Auto-save every 30 seconds
-setInterval(saveGame, 30000);
 </script>
 </body>
-</html>V21 Update
+</html>
