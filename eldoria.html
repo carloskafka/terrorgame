@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Eldoria ARPG - V13 Mobile Restoration</title>
+<title>Eldoria ARPG - V14 Complete</title>
 <style>
 html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black; font-family:Arial; touch-action: none; }
 
@@ -49,8 +49,15 @@ html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black;
 }
 #btnAtk { bottom: 60px; right: 180px; width: 90px; height: 90px; background: rgba(211, 51, 51, 0.4); font-size: 18px; }
 #btnSkill { bottom: 160px; right: 140px; width: 65px; height: 65px; background: rgba(45, 127, 255, 0.4); }
+#btnIce { bottom: 260px; right: 140px; width: 55px; height: 55px; background: rgba(0, 255, 255, 0.3); }
+#btnThunder { bottom: 320px; right: 140px; width: 55px; height: 55px; background: rgba(255, 255, 0, 0.3); }
+#btnPotion { bottom: 60px; right: 140px; width: 65px; height: 65px; background: rgba(46, 204, 113, 0.4); }
 #btnInv { bottom: 160px; right: 40px; width: 65px; height: 65px; }
 #btnShop { bottom: 60px; right: 40px; width: 65px; height: 65px; }
+#btnAchv { bottom: 160px; right: 240px; width: 55px; height: 55px; background: rgba(255, 215, 0, 0.3); }
+#btnPause { top: 15px; right: 15px; width: 50px; height: 50px; background: rgba(255, 165, 0, 0.4); font-size: 20px; }
+#btnMap { bottom: 260px; right: 40px; width: 55px; height: 55px; background: rgba(155, 89, 182, 0.4); }
+#btnSkillTree { bottom: 320px; right: 40px; width: 55px; height: 55px; background: rgba(230, 126, 34, 0.4); }
 
 #controls{
     position:fixed; top:18px; right:18px; background:rgba(0,0,0,.65);
@@ -62,10 +69,14 @@ html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black;
     border:1px solid rgba(255,255,255,.2); border-radius:14px; padding:12px;
     color:#d8e7ff; font-size:13px; z-index:1200; pointer-events: none;
 }
-#statusWindow, #shopWindow{
+#statusWindow, #shopWindow, #achievementWindow, #skillTreeWindow, #mapWindow, #pauseOverlay{
     display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
     width:90%; max-width: 680px; height:80vh; overflow:auto; background:#0a1930;
     border:3px solid #5ab9ff; padding:20px; border-radius:18px; z-index:5000; color:white;
+}
+#pauseOverlay {
+    background: rgba(0,0,0,0.85); text-align: center;
+    display: none; width: 400px; height: auto; max-height: 80vh;
 }
 .item{ background:#17304e; padding:12px; margin:8px 0; border-radius:10px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
 .item:hover{ background:#24496f; }
@@ -74,6 +85,26 @@ html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black;
 .playerName{ display:block; color:#ffd66b; font-size:18px; }
 .title{ display:block; font-size:11px; color:#fff; }
 .sell-btn { background: #e67e22; border:none; color:white; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:bold; }
+
+.skill-node {
+    background: #1a3a5c; border: 2px solid #5ab9ff; border-radius: 10px;
+    padding: 15px; margin: 10px 0; cursor: pointer; transition: all 0.3s;
+}
+.skill-node:hover { background: #2a4a6c; }
+.skill-node.unlocked { border-color: #2ecc71; background: #1a5c3a; }
+.skill-node.maxed { border-color: #f39c12; background: #5c4a1a; }
+.skill-node.locked { opacity: 0.5; cursor: not-allowed; }
+
+.pause-btn {
+    background: #3498db; color: white; border: none; padding: 12px 24px;
+    margin: 10px; border-radius: 8px; cursor: pointer; font-size: 16px;
+    width: 200px;
+}
+.pause-btn:hover { background: #2980b9; }
+.pause-btn.resume { background: #2ecc71; }
+.pause-btn.resume:hover { background: #27ae60; }
+.pause-btn.quit { background: #e74c3c; }
+.pause-btn.quit:hover { background: #c0392b; }
 
 /* Esconde controles desktop no mobile e vice-versa */
 @media (max-width: 800px) { #controls { display: none; } }
@@ -88,24 +119,29 @@ html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black;
     HP <div class="bar"><div id="hp" class="fill hp"></div></div>
     SP <div class="bar"><div id="sp" class="fill sp"></div></div>
     XP <div class="bar"><div id="xp" class="fill" style="background:#2ecc71"></div></div>
+    <div style="margin-top:10px; font-size:12px; color:#aaa;">SP: <span id="skillPoints">0</span></div>
 </div>
 
 <div id="mobileControls">
     <div id="joystickArea"><div id="joystickStick"></div></div>
     <div id="btnAtk" class="mobile-btn">ATK</div>
     <div id="btnSkill" class="mobile-btn">Z</div>
-    <div id="btnIce" class="mobile-btn" style="bottom: 260px; right: 140px; width: 55px; height: 55px; background: rgba(0, 255, 255, 0.3);">X</div>
-    <div id="btnThunder" class="mobile-btn" style="bottom: 320px; right: 140px; width: 55px; height: 55px; background: rgba(255, 255, 0, 0.3);">C</div>
-    <div id="btnPotion" class="mobile-btn" style="bottom: 60px; right: 140px; width: 65px; height: 65px; background: rgba(46, 204, 113, 0.4);">Q</div>
+    <div id="btnIce" class="mobile-btn">X</div>
+    <div id="btnThunder" class="mobile-btn">C</div>
+    <div id="btnPotion" class="mobile-btn">Q</div>
     <div id="btnInv" class="mobile-btn">V</div>
     <div id="btnShop" class="mobile-btn">E</div>
-    <div id="btnAchv" class="mobile-btn" style="bottom: 160px; right: 240px; width: 55px; height: 55px; background: rgba(255, 215, 0, 0.3);">H</div>
+    <div id="btnAchv" class="mobile-btn">H</div>
+    <div id="btnPause" class="mobile-btn">P</div>
+    <div id="btnMap" class="mobile-btn">M</div>
+    <div id="btnSkillTree" class="mobile-btn">Y</div>
 </div>
 
 <div id="controls">
     WASD mover | SPACE atacar<br>
     Z Fireball | X Ice Blast | C Thunder<br>
     Q Poção | E Loja | H Conquistas<br>
+    Y Skills | M Mapa | P Pause<br>
     V Personagem | F Fullscreen
 </div>
 
@@ -130,16 +166,35 @@ html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black;
     <div id="shopInventoryPanel"></div>
 </div>
 
-<div id="achievementWindow" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:600px; height:80vh; overflow:auto; background:#0a1930; border:3px solid #5ab9ff; padding:20px; border-radius:18px; z-index:5000; color:white;">
+<div id="achievementWindow">
     <div style="display:flex; justify-content:space-between"><h2>🏆 Conquistas</h2><button onclick="toggleAchievements()" style="background:red; color:white; border:none; padding:5px 10px; cursor:pointer;">X</button></div>
     <div id="achievementList"></div>
+</div>
+
+<div id="skillTreeWindow">
+    <div style="display:flex; justify-content:space-between"><h2>⚡ Árvore de Habilidades</h2><button onclick="toggleSkillTree()" style="background:red; color:white; border:none; padding:5px 10px; cursor:pointer;">X</button></div>
+    <p style="color:#aaa; margin-bottom:15px;">Skill Points disponíveis: <span id="availableSP" style="color:#f39c12; font-weight:bold;">0</span></p>
+    <div id="skillTreeList"></div>
+</div>
+
+<div id="mapWindow">
+    <div style="display:flex; justify-content:space-between"><h2>🗺️ Mapa Completo</h2><button onclick="toggleMap()" style="background:red; color:white; border:none; padding:5px 10px; cursor:pointer;">X</button></div>
+    <canvas id="fullMapCanvas" width="600" height="600" style="background:#0a2814; border:2px solid #5ab9ff; border-radius:10px; display:block; margin:0 auto;"></canvas>
+    <p style="text-align:center; color:#aaa; margin-top:10px;">Pressione M para fechar</p>
+</div>
+
+<div id="pauseOverlay">
+    <h2 style="color:white; margin-bottom:20px;">⏸️ Jogo Pausado</h2>
+    <button class="pause-btn resume" onclick="togglePause()">▶️ Continuar</button><br>
+    <button class="pause-btn" onclick="saveGameManual()">💾 Salvar Jogo</button><br>
+    <button class="pause-btn quit" onclick="resetGame()">🔄 Reiniciar</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
 <script>
 /* -------- ESTADO E MECÂNICAS ORIGINAIS RESTAURADAS -------- */
-let player={ level:1, xp:0, next:50, gold:0, baseAtk:10, baseDef:3, atk:10, def:3, hp:100, maxHp:100, sp:100, maxSp:100 };
+let player={ level:1, xp:0, next:50, gold:0, baseAtk:10, baseDef:3, atk:10, def:3, hp:100, maxHp:100, sp:100, maxSp:100, skillPoints: 0 };
 let inventory=[];
 let monsters=[];
 let keys={};
@@ -150,6 +205,238 @@ let lastDir = new THREE.Vector3(0,0,1);
 let equipped={ weapon:null, shield:null, cape:null, boots:null, ring1:null, ring2:null };
 let isAttacking = false;
 let lastSpawnTime = 0;
+
+/* -------- SISTEMA DE ÁUDIO -------- */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(type) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    const now = audioCtx.currentTime;
+    
+    switch(type) {
+        case 'attack':
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.1);
+            break;
+        case 'fireball':
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.exponentialRampToValueAtTime(200, now + 0.3);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+            break;
+        case 'ice':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+            break;
+        case 'thunder':
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(50, now + 0.4);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.4);
+            break;
+        case 'hit':
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.15);
+            break;
+        case 'levelup':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.setValueAtTime(600, now + 0.1);
+            osc.frequency.setValueAtTime(800, now + 0.2);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.4);
+            break;
+        case 'coin':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1200, now);
+            osc.frequency.setValueAtTime(1600, now + 0.1);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now);
+            osc.stop(now + 0.2);
+            break;
+        case 'unlock':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(1000, now + 0.3);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.start(now);
+            osc.stop(now + 0.3);
+            break;
+    }
+}
+
+/* -------- SISTEMA DE SKILL TREE -------- */
+let skillTree = [
+    { id: 'fireball', name: 'Fireball 🔥', desc: 'Lança uma bola de fogo (Dano: 40)', baseCost: 25, level: 1, maxLevel: 5, damage: 40, unlocked: true },
+    { id: 'iceblast', name: 'Ice Blast ❄️', desc: 'Congela inimigos (Dano: 35)', baseCost: 30, level: 0, maxLevel: 3, damage: 35, unlocked: false, reqLevel: 3 },
+    { id: 'thunder', name: 'Thunder Strike ⚡', desc: 'Raio poderoso (Dano: 80)', baseCost: 35, level: 0, maxLevel: 3, damage: 80, unlocked: false, reqLevel: 5 },
+    { id: 'heal', name: 'Heal 💚', desc: 'Recupera 60 HP', baseCost: 40, level: 0, maxLevel: 3, heal: 60, unlocked: false, reqLevel: 7 },
+    { id: 'shield', name: 'Shield 🛡️', desc: 'Escudo temporário (+50 HP)', baseCost: 30, level: 0, maxLevel: 3, shield: 50, unlocked: false, reqLevel: 10 },
+    { id: 'berserk', name: 'Berserk 💢', desc: '+50% ATK por 10s', baseCost: 50, level: 0, maxLevel: 2, atkBuff: 1.5, duration: 10000, unlocked: false, reqLevel: 15 }
+];
+
+function updateSkillTreeUI() {
+    document.getElementById('availableSP').innerText = player.skillPoints;
+    document.getElementById('skillPoints').innerText = player.skillPoints;
+    const list = document.getElementById('skillTreeList');
+    list.innerHTML = '';
+    
+    skillTree.forEach(skill => {
+        const canUnlock = player.level >= (skill.reqLevel || 1);
+        const canUpgrade = player.skillPoints > 0 && skill.level < skill.maxLevel && (skill.unlocked || canUnlock);
+        let status = skill.level >= skill.maxLevel ? 'maxed' : (canUpgrade ? '' : 'locked');
+        if (skill.unlocked && skill.level > 0) status = 'unlocked';
+        
+        const div = document.createElement('div');
+        div.className = `skill-node ${status}`;
+        div.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong>${skill.name}</strong>
+                <span style="color:#f39c12;">Nv.${skill.level}/${skill.maxLevel}</span>
+            </div>
+            <p style="margin:5px 0; color:#aaa; font-size:13px;">${skill.desc}</p>
+            ${skill.level < skill.maxLevel ? `<p style="font-size:12px; color:#5ab9ff;">Custo: ${skill.baseCost} SP | Dano: ${skill.damage || skill.heal || skill.shield || skill.atkBuff}</p>` : '<p style="font-size:12px; color:#2ecc71;">MAXIMIZADO</p>'}
+        `;
+        
+        if (canUpgrade) {
+            div.onclick = () => upgradeSkill(skill.id);
+        } else if (!canUnlock && !skill.unlocked) {
+            div.innerHTML += `<p style="font-size:11px; color:#e74c3c;">Requer nível ${skill.reqLevel}</p>`;
+        }
+        
+        list.appendChild(div);
+    });
+}
+
+function upgradeSkill(skillId) {
+    const skill = skillTree.find(s => s.id === skillId);
+    if (skill && player.skillPoints > 0 && skill.level < skill.maxLevel) {
+        player.skillPoints--;
+        skill.level++;
+        if (skill.level === 1) skill.unlocked = true;
+        playSound('unlock');
+        floatingText("Skill Up!", hero.position, "#2ecc71");
+        log(`<span style='color:#2ecc71'>${skill.name} upgraded to level ${skill.level}!</span>`);
+        updateSkillTreeUI();
+        saveGame();
+    }
+}
+
+function toggleSkillTree() {
+    const win = document.getElementById('skillTreeWindow');
+    win.style.display = win.style.display === 'block' ? 'none' : 'block';
+    updateSkillTreeUI();
+}
+
+/* -------- SISTEMA DE PAUSE -------- */
+let isPaused = false;
+
+function togglePause() {
+    isPaused = !isPaused;
+    const overlay = document.getElementById('pauseOverlay');
+    overlay.style.display = isPaused ? 'block' : 'none';
+}
+
+function saveGameManual() {
+    saveGame();
+    alert('Jogo salvo com sucesso!');
+}
+
+function resetGame() {
+    if (confirm('Tem certeza que deseja reiniciar? Todo o progresso será perdido!')) {
+        localStorage.removeItem('eldoriaSave');
+        location.reload();
+    }
+}
+
+/* -------- SISTEMA DE MAPA -------- */
+let mapOpen = false;
+
+function toggleMap() {
+    mapOpen = !mapOpen;
+    const win = document.getElementById('mapWindow');
+    win.style.display = mapOpen ? 'block' : 'none';
+    if (mapOpen) drawFullMap();
+}
+
+function drawFullMap() {
+    const canvas = document.getElementById('fullMapCanvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 600, 600);
+    
+    // Bioma background
+    const biomeColors = ['#3ea55e', '#1a4a1a', '#c2b280', '#e8f4f8', '#4a2a2a'];
+    const biomeIndex = Math.min(Math.floor(player.level / 5), 4);
+    ctx.fillStyle = biomeColors[biomeIndex];
+    ctx.fillRect(0, 0, 600, 600);
+    
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    for (let i = 0; i < 600; i += 50) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, 600);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(600, i);
+        ctx.stroke();
+    }
+    
+    // Player position (center)
+    const centerX = 300 + hero.position.x * 0.5;
+    const centerZ = 300 + hero.position.z * 0.5;
+    
+    // Monsters
+    monsters.forEach(m => {
+        const mx = 300 + m.position.x * 0.5;
+        const mz = 300 + m.position.z * 0.5;
+        if (mx > 0 && mx < 600 && mz > 0 && mz < 600) {
+            ctx.fillStyle = m.userData.isBoss ? '#ff0000' : '#ffaa00';
+            ctx.beginPath();
+            ctx.arc(mx, mz, m.userData.isBoss ? 6 : 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+    
+    // Player
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(centerX, centerZ, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+}
+
+/* -------- ESTADO E MECÂNICAS ORIGINAIS RESTAURADAS -------- */
 
 /* -------- SISTEMA DE ACHIEVEMENTS -------- */
 let playerStats = {
@@ -285,10 +572,26 @@ function spawnMonster(elite=false){
     let sZ = hero.position.z + (Math.random()-0.5)*150;
     let lv = elite ? 10 : player.level + Math.floor(Math.random()*3);
     let size = elite ? 4 : 1.5;
-    let m=new THREE.Mesh(new THREE.BoxGeometry(size,size,size), new THREE.MeshStandardMaterial({color:elite?0xff0000:0x9933ff}));
+    
+    // Tipos de inimigos com formas diferentes
+    const enemyTypes = [
+        { name: "Wolf", color: 0x9933ff, geo: "box" },
+        { name: "Goblin", color: 0x228822, geo: "cylinder" },
+        { name: "Skeleton", color: 0xdddddd, geo: "capsule" },
+        { name: "Orc", color: 0x4a7c23, geo: "box" },
+        { name: "Demon", color: 0x8b0000, geo: "box" }
+    ];
+    
+    const type = enemyTypes[Math.min(Math.floor(player.level / 5), enemyTypes.length - 1)];
+    let geometry;
+    if (type.geo === "box") geometry = new THREE.BoxGeometry(size, size, size);
+    else if (type.geo === "cylinder") geometry = new THREE.CylinderGeometry(size/2, size/2, size, 8);
+    else geometry = new THREE.CapsuleGeometry(size/2, size/2, 4, 8);
+    
+    let m=new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({color: elite ? 0xff0000 : type.color}));
     m.position.set(sX, size/2, sZ);
     let hp = elite ? 1200 : 50 + (lv * 10);
-    m.userData={ name: elite?"BOSS":"Wolf", level: lv, hp, maxHp: hp, xp: elite?500:20+(lv*5), atk: elite?25:5+(lv*2), isBoss: elite, lastAttack: 0, ui: hpBar(), label: makeLabel("") };
+    m.userData={ name: elite?"BOSS "+type.name:type.name, level: lv, hp, maxHp: hp, xp: elite?500:20+(lv*5), atk: elite?25:5+(lv*2), isBoss: elite, lastAttack: 0, ui: hpBar(), label: makeLabel("") };
     scene.add(m); monsters.push(m);
 }
 
@@ -336,11 +639,15 @@ function checkLevel(){
         else if(r < 0.75) { player.maxHp += 40; bonus = "+40 HP"; }
         else { player.maxSp += 30; bonus = "+30 SP"; }
         player.hp = player.maxHp; player.sp = player.maxSp;
+        player.skillPoints += 2; // Ganha 2 skill points por nível
         heroLabel.querySelector(".playerName").innerHTML="John Legend Lv."+player.level;
         floatingText("LEVEL UP! " + bonus, hero.position, "gold");
+        playSound('levelup');
         recalcStats();
         checkAchievements();
         checkBiomeChange();
+        updateSkillTreeUI();
+        saveGame();
     }
 }
 
@@ -381,6 +688,7 @@ function checkBiomeChange(){
 function castFireball(){
     if(player.sp < 25){ log("SP insuficiente!"); return; }
     player.sp -= 25;
+    playSound('fireball');
     let fb = new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshStandardMaterial({color:0xff4400, emissive:0xff0000}));
     fb.position.copy(hero.position).y = 1.2;
     scene.add(fb);
@@ -390,6 +698,7 @@ function castFireball(){
 function castIceBlast(){
     if(player.sp < 30){ log("SP insuficiente!"); return; }
     player.sp -= 30;
+    playSound('ice');
     let ice = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x0088ff}));
     ice.position.copy(hero.position).y = 1.2;
     scene.add(ice);
@@ -399,12 +708,14 @@ function castIceBlast(){
 function castThunderStrike(){
     if(player.sp < 35){ log("SP insuficiente!"); return; }
     player.sp -= 35;
+    playSound('thunder');
     
     // Dano em área ao redor do jogador
     monsters.forEach(m => {
         if(hero.position.distanceTo(m.position) < 8) {
             m.userData.hp -= 80;
             floatingText("-80", m.position, "yellow");
+            playSound('hit');
             if(m.userData.hp <= 0) killMonster(m);
         }
     });
@@ -442,6 +753,7 @@ function usePotion(){
 function attack(){
     if(isAttacking) return;
     isAttacking = true; hand.visible = true;
+    playSound('attack');
     let t = 0;
     let anim = setInterval(()=>{
         t += 0.3; hand.position.z = 0.4 + Math.sin(t)*0.8;
@@ -451,6 +763,7 @@ function attack(){
         if(hero.position.distanceTo(m.position) < 4.5){
             let dmg = player.atk + Math.floor(Math.random()*5);
             m.userData.hp -= dmg; floatingText("-"+dmg, m.position, "orange");
+            playSound('hit');
             if(m.userData.hp <= 0) killMonster(m);
         }
     });
@@ -571,7 +884,8 @@ function saveGame() {
         equipped: equipped,
         playerStats: { ...playerStats, itemsCollected: Array.from(playerStats.itemsCollected) },
         achievements: achievements,
-        biomesVisited: playerStats.biomesVisited
+        biomesVisited: playerStats.biomesVisited,
+        skillTree: skillTree
     };
     localStorage.setItem('eldoriaSave', JSON.stringify(saveData));
 }
@@ -591,13 +905,17 @@ function loadGame() {
             playerStats.totalGold = data.playerStats.totalGold || 0;
         }
         if(data.achievements) achievements = data.achievements;
+        if(data.skillTree) skillTree = data.skillTree;
         
         // Restore visual state
         heroLabel.querySelector(".playerName").innerHTML = "John Legend Lv." + player.level;
         recalcStats();
         applyEquipVisual();
         checkBiomeChange();
+        updateSkillTreeUI();
         log("<span style='color:green'>Jogo carregado com sucesso!</span>");
+    } else {
+        updateSkillTreeUI();
     }
 }
 
@@ -710,6 +1028,9 @@ window.onkeydown=e=>{ keys[e.key.toLowerCase()]=true;
     if(e.key.toLowerCase()==="v") toggleV();
     if(e.key.toLowerCase()==="e") toggleShop();
     if(e.key.toLowerCase()==="h") toggleAchievements();
+    if(e.key.toLowerCase()==="y") toggleSkillTree();
+    if(e.key.toLowerCase()==="m") toggleMap();
+    if(e.key.toLowerCase()==="p") togglePause();
     if(e.key.toLowerCase()==="f") document.documentElement.requestFullscreen();
 };
 window.onkeyup=e=>keys[e.key.toLowerCase()]=false;
@@ -720,9 +1041,14 @@ window.addEventListener('resize', () => {
     renderer.setSize(innerWidth, innerHeight);
 });
 
+// Mobile button events
+document.getElementById('btnPause').addEventListener('touchstart', (e) => { e.preventDefault(); togglePause(); });
+document.getElementById('btnMap').addEventListener('touchstart', (e) => { e.preventDefault(); toggleMap(); });
+document.getElementById('btnSkillTree').addEventListener('touchstart', (e) => { e.preventDefault(); toggleSkillTree(); });
+
 animate();
-log("Eldoria Mobile Restaurado!");
-log("<span style='color:cyan'>Novidades: Achievements (H), Poções (Q), Ice Blast (X), Thunder Strike (C), Biomas!</span>");
+log("Eldoria V14 - Complete!");
+log("<span style='color:cyan'>Novidades: Skills Tree (Y), Mapa (M), Pause (P), Sons, Save/Load!</span>");
 
 // Load game on start
 loadGame();
