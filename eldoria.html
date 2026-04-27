@@ -322,9 +322,9 @@ function playSound(type) {
 
 /* -------- SISTEMA DE SKILL TREE -------- */
 let skillTree = [
-    { id: 'fireball', name: 'Fireball 🔥', desc: 'Lança uma bola de fogo (Dano: 40)', baseCost: 25, level: 1, maxLevel: 5, damage: 40, unlocked: true },
-    { id: 'iceblast', name: 'Ice Blast ❄️', desc: 'Congela inimigos (Dano: 35)', baseCost: 30, level: 0, maxLevel: 3, damage: 35, unlocked: false, reqLevel: 3 },
-    { id: 'thunder', name: 'Thunder Strike ⚡', desc: 'Raio poderoso (Dano: 80)', baseCost: 35, level: 0, maxLevel: 3, damage: 80, unlocked: false, reqLevel: 5 },
+    { id: 'fireball', name: 'Fireball 🔥', desc: 'Lança uma bola de fogo', baseCost: 25, level: 1, maxLevel: 5, damage: 40, unlocked: true },
+    { id: 'iceblast', name: 'Ice Blast ❄️', desc: 'Congela inimigos', baseCost: 30, level: 0, maxLevel: 3, damage: 35, unlocked: false, reqLevel: 3 },
+    { id: 'thunder', name: 'Thunder Strike ⚡', desc: 'Raio poderoso', baseCost: 35, level: 0, maxLevel: 3, damage: 80, unlocked: false, reqLevel: 5 },
     { id: 'heal', name: 'Heal 💚', desc: 'Recupera 60 HP', baseCost: 40, level: 0, maxLevel: 3, heal: 60, unlocked: false, reqLevel: 7 },
     { id: 'shield', name: 'Shield 🛡️', desc: 'Escudo temporário (+50 HP)', baseCost: 30, level: 0, maxLevel: 3, shield: 50, unlocked: false, reqLevel: 10 },
     { id: 'berserk', name: 'Berserk 💢', desc: '+50% ATK por 10s', baseCost: 50, level: 0, maxLevel: 2, atkBuff: 1.5, duration: 10000, unlocked: false, reqLevel: 15 }
@@ -360,7 +360,7 @@ function updateSkillTreeUI() {
                 <span style="color:#f39c12;">Nv.${skill.level}/${skill.maxLevel}</span>
             </div>
             <p style="margin:5px 0; color:#aaa; font-size:13px;">${skill.desc}</p>
-            ${skill.level < skill.maxLevel ? `<p style="font-size:12px; color:#5ab9ff;">Custo: ${skill.baseCost} SP | Dano: ${skill.damage || skill.heal || skill.shield || skill.atkBuff}</p>` : '<p style="font-size:12px; color:#2ecc71;">MAXIMIZADO</p>'}
+            ${skill.level < skill.maxLevel ? `<p style="font-size:12px; color:#5ab9ff;">Custo: ${skill.baseCost} SP | Nível: ${skill.level}/${skill.maxLevel}</p>` : '<p style="font-size:12px; color:#2ecc71;">MAXIMIZADO</p>'}
         `;
         
         if (canUpgrade) {
@@ -388,6 +388,11 @@ function upgradeSkill(skillId) {
         updateSkillTreeUI();
         saveGame();
     }
+}
+
+function getSkillLevel(skillId) {
+    const skill = skillTree.find(s => s.id === skillId);
+    return skill ? skill.level : 0;
 }
 
 function toggleSkillTree() {
@@ -921,10 +926,13 @@ function castFireball(){
     skillCooldowns.fireball = now;
     player.sp -= 25;
     playSound('fireball');
-    let fb = new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshStandardMaterial({color:0xff4400, emissive:0xff0000}));
+    let fbLevel = getSkillLevel("fireball");
+    let fbSize = 0.6 + (fbLevel * 0.15);
+    let fbIntensity = Math.min(1.0, 0.2 + (fbLevel * 0.2));
+    let fb = new THREE.Mesh(new THREE.SphereGeometry(fbSize), new THREE.MeshStandardMaterial({color:0xff4400, emissive:0xff0000, emissiveIntensity: 1.0 + fbLevel}));
     fb.position.copy(hero.position).y = 1.2;
     scene.add(fb);
-    fireballs.push({ mesh: fb, dir: lastDir.clone().normalize(), life: 80, type: "fire", damage: 40 });
+    fireballs.push({ mesh: fb, dir: lastDir.clone().normalize(), life: 80, type: "fire", damage: Math.floor(40 * (1 + getSkillLevel("fireball") * 0.3)) });
     updateSkillHotbar();
 }
 
@@ -935,10 +943,12 @@ function castIceBlast(){
     skillCooldowns.iceblast = now;
     player.sp -= 30;
     playSound('ice');
-    let ice = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x0088ff}));
+    let iceLevel = getSkillLevel("iceblast");
+    let iceSize = 0.5 + (iceLevel * 0.12);
+    let ice = new THREE.Mesh(new THREE.SphereGeometry(iceSize), new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x0088ff, emissiveIntensity: 1.0 + iceLevel}));
     ice.position.copy(hero.position).y = 1.2;
     scene.add(ice);
-    fireballs.push({ mesh: ice, dir: lastDir.clone().normalize(), life: 80, type: "ice", damage: 35 });
+    fireballs.push({ mesh: ice, dir: lastDir.clone().normalize(), life: 80, type: "ice", damage: Math.floor(35 * (1 + getSkillLevel("iceblast") * 0.3)) });
     updateSkillHotbar();
 }
 
