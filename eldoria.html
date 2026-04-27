@@ -344,10 +344,15 @@ html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black;
 
 <div id="statusWindow">
     <button onclick="toggleV()" class="close-btn">×</button>
-    <h2>🎒 Inventário</h2>
+    <h2>🎒 Inventário & Personagem</h2>
     <div id="statsPanel" style="background:rgba(255,255,255,0.1); padding:10px; border-radius:8px; margin-bottom:10px;"></div>
     <h3>⚔️ Equipamento</h3>
     <div id="equippedPanel"></div>
+    <!-- Pet Equipado -->
+    <div id="petEquippedDisplay" style="margin-top:10px; padding:10px; background:rgba(78,205,196,0.1); border-radius:8px; display:none;">
+        <h4 style="color:#4ecdc4; margin:0 0 8px 0;">🐾 Pet Ativo</h4>
+        <div id="petStatsDisplay"></div>
+    </div>
     <h3>🎒 Mochila</h3>
     <div id="inventoryPanel" class="inventory-grid"></div>
 </div>
@@ -759,14 +764,14 @@ let dungeonLevel = 1;
 
 // Feature 3: Sistema de Pets
 const petTypes = [
-    { id: 'wolf_pup', name: 'Filhote de Lobo', icon: '🐺', type: 'combat', baseStats: {atk: 5, hp: 30}, bonus: {atk: 5, critChance: 2}, unlockLevel: 5, source: 'drop', dropRate: 0.05 },
-    { id: 'fairy', name: 'Fada Mística', icon: '🧚', type: 'support', baseStats: {hp: 20, spRegen: 2}, bonus: {spRegen: 2, manaRegen: 3}, unlockLevel: 8, source: 'drop', dropRate: 0.03 },
-    { id: 'baby_dragon', name: 'Dragão Bebê', icon: '🐲', type: 'combat', baseStats: {atk: 12, hp: 50}, bonus: {atk: 10, fireDmg: 15}, unlockLevel: 15, source: 'boss', dropRate: 0.02 },
-    { id: 'spirit_wolf', name: 'Lobo Espiritual', icon: '🐺', type: 'combat', baseStats: {atk: 8, hp: 40}, bonus: {atk: 8, speed: 10}, unlockLevel: 12, source: 'dungeon', dropRate: 0.04 },
-    { id: 'golem', name: 'Golem de Pedra', icon: '🗿', type: 'tank', baseStats: {hp: 100, def: 15}, bonus: {def: 15, hp: 50}, unlockLevel: 10, source: 'drop', dropRate: 0.04 },
-    { id: 'phoenix', name: 'Fênix', icon: '🔥', type: 'support', baseStats: {hp: 60, spRegen: 3}, bonus: {revive: true, fireRes: 20}, unlockLevel: 20, source: 'boss', dropRate: 0.01 },
-    { id: 'owl', name: 'Coruja Sábia', icon: '🦉', type: 'support', baseStats: {spRegen: 3, xp: 5}, bonus: {xpBonus: 10, spRegen: 2}, unlockLevel: 7, source: 'quest', dropRate: 0 },
-    { id: 'slime_king', name: 'Rei Slime', icon: '👑', type: 'tank', baseStats: {hp: 80, def: 10}, bonus: {def: 12, hpRegen: 2}, unlockLevel: 6, source: 'drop', dropRate: 0.06 }
+    { id: 'wolf_pup', name: 'Filhote de Lobo', icon: '🐺', type: 'combat', baseStats: {atk: 5, hp: 30}, bonus: {atk: 5, critChance: 2}, unlockLevel: 5, source: 'drop', dropRate: 0.05, evolution: { level: 10, id: 'dire_wolf', name: 'Lobo Uivador', icon: '🐺' } },
+    { id: 'fairy', name: 'Fada Mística', icon: '🧚', type: 'support', baseStats: {hp: 20, spRegen: 2}, bonus: {spRegen: 2, manaRegen: 3}, unlockLevel: 8, source: 'drop', dropRate: 0.03, evolution: { level: 10, id: 'arch_fairy', name: 'Arquifada', icon: '🧚‍♀️' } },
+    { id: 'baby_dragon', name: 'Dragão Bebê', icon: '🐲', type: 'combat', baseStats: {atk: 12, hp: 50}, bonus: {atk: 10, fireDmg: 15}, unlockLevel: 15, source: 'boss', dropRate: 0.02, evolution: { level: 15, id: 'ancient_dragon', name: 'Dragão Ancião', icon: '🐉' } },
+    { id: 'spirit_wolf', name: 'Lobo Espiritual', icon: '🐺', type: 'combat', baseStats: {atk: 8, hp: 40}, bonus: {atk: 8, speed: 10}, unlockLevel: 12, source: 'dungeon', dropRate: 0.04, evolution: { level: 12, id: 'alpha_wolf', name: 'Lobo Alfa', icon: '🐺' } },
+    { id: 'golem', name: 'Golem de Pedra', icon: '🗿', type: 'tank', baseStats: {hp: 100, def: 15}, bonus: {def: 15, hp: 50}, unlockLevel: 10, source: 'drop', dropRate: 0.04, evolution: { level: 15, id: 'iron_golem', name: 'Golem de Ferro', icon: '🤖' } },
+    { id: 'phoenix', name: 'Fênix', icon: '🔥', type: 'support', baseStats: {hp: 60, spRegen: 3}, bonus: {revive: true, fireRes: 20}, unlockLevel: 20, source: 'boss', dropRate: 0.01, evolution: { level: 20, id: 'cosmic_phoenix', name: 'Fênix Cósmica', icon: '🌟' } },
+    { id: 'owl', name: 'Coruja Sábia', icon: '🦉', type: 'support', baseStats: {spRegen: 3, xp: 5}, bonus: {xpBonus: 10, spRegen: 2}, unlockLevel: 7, source: 'quest', dropRate: 0, evolution: { level: 10, id: 'great_owl', name: 'Grande Coruja', icon: '🦅' } },
+    { id: 'slime_king', name: 'Rei Slime', icon: '👑', type: 'tank', baseStats: {hp: 80, def: 10}, bonus: {def: 12, hpRegen: 2}, unlockLevel: 6, source: 'drop', dropRate: 0.06, evolution: { level: 12, id: 'slime_emperor', name: 'Imperador Slime', icon: '🤴' } }
 ];
 
 let activePet = null;
@@ -827,6 +832,13 @@ let seasonalEvent = {
 
 // Feature 1: Sistema de Crafting - Funções
 function openCraftingWindow() {
+    // Se já estiver aberta, fecha e retorna
+    const existing = document.getElementById('craftingWindow');
+    if (existing) {
+        closeCraftingWindow();
+        return;
+    }
+    
     gamePaused = true;
     let craftingHTML = `
         <div id="craftingWindow" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:700px;max-height:80vh;overflow-y:auto;background:linear-gradient(135deg, rgba(5,15,35,.98), rgba(15,25,45,.98));border-radius:20px;border:3px solid #5ab9ff;z-index:5000;padding:25px;box-shadow:0 0 50px rgba(90,185,255,0.3);">
@@ -1192,6 +1204,8 @@ function equipPet(petId) {
     createPetMesh(); // Criar mesh 3D do pet
     log(`<span style="color:#4ecdc4">🐾 ${pet.name} agora está ativo!</span>`);
     recalcStats();
+    // Atualizar UI se a janela de status estiver aberta
+    updatePanels();
 }
 
 function unequipPet() {
@@ -1201,6 +1215,14 @@ function unequipPet() {
     activePet = null;
     removePetMesh(); // Remover mesh 3D do pet
     recalcStats();
+    // Atualizar UI se a janela de status estiver aberta
+    updatePanels();
+    // Atualizar janela de pets se estiver aberta
+    const petsWin = document.getElementById('petsWindow');
+    if (petsWin) {
+        closePetsWindow();
+        showPetsWindow();
+    }
 }
 
 function applyPetBonuses() {
@@ -2946,6 +2968,34 @@ function recalcStats(){
 
 function updatePanels(){
     statsPanel.innerHTML=`<div style="font-size:18px; margin-bottom:10px;">🎯 Nível ${player.level}</div><div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;"><div style="background:rgba(255,100,100,0.3); padding:8px; border-radius:6px;">⚔️ ATK: ${player.atk}</div><div style="background:rgba(100,150,255,0.3); padding:8px; border-radius:6px;">🛡️ DEF: ${player.def}</div><div style="background:rgba(100,255,150,0.3); padding:8px; border-radius:6px;">❤️ HP: ${player.hp}/${player.maxHp}</div><div style="background:rgba(100,150,255,0.3); padding:8px; border-radius:6px;">💙 SP: ${Math.floor(player.sp)}/${player.maxSp}</div></div><div style="margin-top:10px; color:gold;">💰 Gold: ${player.gold}</div>`;
+    
+    // Atualizar display do pet equipado
+    const petDisplay = document.getElementById('petEquippedDisplay');
+    const petStatsDiv = document.getElementById('petStatsDisplay');
+    if (activePet && petDisplay && petStatsDiv) {
+        petDisplay.style.display = 'block';
+        petStatsDiv.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                <span style="font-size:28px;">${activePet.icon}</span>
+                <div>
+                    <div style="color:white; font-weight:bold;">${activePet.name} <span style="color:#4ecdc4; font-size:14px;">Lv.${activePet.level}</span></div>
+                    <div style="color:#888; font-size:12px;">${activePet.type} • XP: ${activePet.xp}/${activePet.nextXp}</div>
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; font-size:12px;">
+                ${activePet.bonus.atk ? `<div style="color:#ff9966;">+${activePet.bonus.atk} ATK</div>` : ''}
+                ${activePet.bonus.def ? `<div style="color:#66aaff;">+${activePet.bonus.def} DEF</div>` : ''}
+                ${activePet.bonus.hp ? `<div style="color:#ff6666;">+${activePet.bonus.hp} HP</div>` : ''}
+                ${activePet.bonus.spRegen ? `<div style="color:#6699ff;">+${activePet.bonus.spRegen} SP/s</div>` : ''}
+                ${activePet.bonus.xpBonus ? `<div style="color:#ffd66b;">+${activePet.bonus.xpBonus}% XP</div>` : ''}
+                ${activePet.bonus.critChance ? `<div style="color:#ff66ff;">+${activePet.bonus.critChance}% CRIT</div>` : ''}
+            </div>
+            <button onclick="unequipPet()" style="margin-top:8px; padding:6px 12px; border-radius:6px; border:none; background:rgba(255,107,107,0.3); color:#ff6b6b; cursor:pointer; font-size:11px; width:100%;">Guardar Pet</button>
+        `;
+    } else if (petDisplay) {
+        petDisplay.style.display = 'none';
+    }
+    
     equippedPanel.innerHTML="";
     const validEquipSlots = ['weapon','shield','cape','boots','ring1','ring2'];
     for(let k of validEquipSlots) {
@@ -4029,9 +4079,23 @@ window.onkeydown=e=>{
     if(e.key.toLowerCase()==="p") togglePause(); // Tecla P para pausar
     if(e.key.toLowerCase()==="q") usePotion(); // Q = Usar poção
     if(e.key.toLowerCase()==="m") toggleFullMap(); // Tecla M para abrir mapa expandido
-    if(e.key.toLowerCase()==="c") openCraftingWindow(); // C = Crafting
+    if(e.key.toLowerCase()==="c") { // C = Crafting toggle
+        const craftingWin = document.getElementById('craftingWindow');
+        if (craftingWin) {
+            closeCraftingWindow();
+        } else {
+            openCraftingWindow();
+        }
+    }
     if(e.key.toLowerCase()==="t") enterDungeon(); // T = Enter Dungeon
-    if(e.key.toLowerCase()==="n") showPetsWindow(); // N = Pets
+    if(e.key.toLowerCase()==="n") { // N = Pets toggle
+        const petsWin = document.getElementById('petsWindow');
+        if (petsWin) {
+            closePetsWindow();
+        } else {
+            showPetsWindow();
+        }
+    }
 };
 window.onkeyup=e=>keys[e.key.toLowerCase()]=false;
 
