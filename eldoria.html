@@ -2834,7 +2834,7 @@ function attack(){
         
         // Detecta hit no meio da animação (quando t ~ PI/2)
         if (t >= Math.PI / 2 && t < Math.PI / 2 + animSpeed) {
-            monsters.forEach(m => {
+            [...monsters].forEach(m => {
                 if(hero.position.distanceTo(m.position) < 4.5 && m.parent && m.userData.hp > 0){
                     let dmg = player.atk + Math.floor(Math.random()*5);
                     
@@ -3501,7 +3501,7 @@ function drawFullMap() {
     });
     
     // Mostrar monstros no mapa — outline escuro para visibilidade em qualquer bioma
-    monsters.forEach(m => {
+    [...monsters].forEach(m => {
         const dist = m.position.distanceTo(hero.position);
         if (dist <= 1000) {
             const mx = centerX + (m.position.x - hero.position.x) * mapScale;
@@ -3827,7 +3827,7 @@ function animate(time){
     // Fireball
     for(let i=fireballs.length-1; i>=0; i--){
         let f = fireballs[i]; f.mesh.position.add(f.dir.clone().multiplyScalar(0.8)); f.life--;
-        monsters.forEach(m=>{
+        [...monsters].forEach(m=>{
             if(f.mesh.position.distanceTo(m.position)<3.5 && m.parent && m.userData.hp > 0){
                 let baseDmg = 40;
                 // Aplica bônus de dano da skill tree
@@ -3896,7 +3896,7 @@ function animate(time){
     }
 
     // Monstros - animação de respiração e atualização
-    monsters.forEach((m)=>{
+    [...monsters].forEach((m)=>{
         let d = hero.position.distanceTo(m.position);
         if (d <= 1000) {
             m.visible = true;
@@ -4125,7 +4125,7 @@ function animate(time){
         }
     });
     
-    monsters.forEach(m => {
+    [...monsters].forEach(m => {
         const dist = m.position.distanceTo(hero.position);
         if (dist <= 1000) {
             const mx = centerX + (m.position.x - hero.position.x) * mapScale;
@@ -4332,7 +4332,7 @@ function revivePlayer() {
 
 function resetGame() {
     // 1. Limpar cena ANTES de zerar os arrays (era o bug principal)
-    monsters.forEach(m => {
+    [...monsters].forEach(m => {
         scene.remove(m);
         if(m.userData.ui && m.userData.ui.bar) m.userData.ui.bar.remove();
         if(m.userData.label) m.userData.label.remove();
