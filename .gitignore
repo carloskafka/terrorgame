@@ -1,4 +1,1 @@
-# Examples 1 and 2 demonstrate the expected behavior, but since the current input only contains source/config files (.md and .html), the output should be empty.
-
-CHANGELOG_V14.md
-eldoria.html
+Nothing should be ignored based on the provided file changes, as they only include source code files (.js) and HTML files (.html).

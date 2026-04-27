@@ -95,6 +95,30 @@ html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black;
 .skill-node.maxed { border-color: #f39c12; background: #5c4a1a; }
 .skill-node.locked { opacity: 0.5; cursor: not-allowed; }
 
+/* Hotbar de habilidades */
+#skillHotbar {
+    position: fixed; top: 15px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; z-index: 3000;
+}
+.hotbar-slot {
+    width: 50px; height: 50px;
+    background: rgba(5, 15, 35, 0.9);
+    border: 2px solid #5ab9ff;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    position: relative;
+}
+.hotbar-slot.active { border-color: #2ecc71; box-shadow: 0 0 10px #2ecc71; }
+.hotbar-slot .key { position: absolute; top: -5px; left: -5px; background: #333; padding: 2px 6px; border-radius: 4px; font-size: 9px; }
+.hotbar-slot .icon { font-size: 20px; }
+.hotbar-slot .cd { position: absolute; bottom: 0; left: 0; height: 3px; background: #e74c3c; width: 100%; }
+
 .pause-btn {
     background: #3498db; color: white; border: none; padding: 12px 24px;
     margin: 10px; border-radius: 8px; cursor: pointer; font-size: 16px;
@@ -190,11 +214,15 @@ html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black;
     <button class="pause-btn quit" onclick="resetGame()">🔄 Reiniciar</button>
 </div>
 
+<!-- Hotbar de Habilidades -->
+<div id="skillHotbar"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
 <script>
 /* -------- ESTADO E MECÂNICAS ORIGINAIS RESTAURADAS -------- */
 let player={ level:1, xp:0, next:50, gold:0, baseAtk:10, baseDef:3, atk:10, def:3, hp:100, maxHp:100, sp:100, maxSp:100, skillPoints: 0 };
+let skillCooldowns = { fireball: 0, iceblast: 0, thunder: 0, heal: 0, shield: 0, berserk: 0 };
 let inventory=[];
 let monsters=[];
 let keys={};
@@ -447,12 +475,24 @@ function resetGame() {
 
 /* -------- SISTEMA DE MAPA -------- */
 let mapOpen = false;
+let mapUpdateInterval = null;
 
 function toggleMap() {
     mapOpen = !mapOpen;
     const win = document.getElementById('mapWindow');
     win.style.display = mapOpen ? 'block' : 'none';
-    if (mapOpen) drawFullMap();
+    if (mapOpen) {
+        drawFullMap();
+        // Atualiza o mapa em tempo real a cada 100ms
+        if (mapUpdateInterval) clearInterval(mapUpdateInterval);
+        mapUpdateInterval = setInterval(drawFullMap, 100);
+    } else {
+        // Para de atualizar quando fechar
+        if (mapUpdateInterval) {
+            clearInterval(mapUpdateInterval);
+            mapUpdateInterval = null;
+        }
+    }
 }
 
 function drawFullMap() {
@@ -876,26 +916,37 @@ function checkBiomeChange(){
 
 function castFireball(){
     if(player.sp < 25){ log("SP insuficiente!"); return; }
+    const now = Date.now();
+    if (now - skillCooldowns.fireball < 1000) { log("Skill em cooldown!"); return; }
+    skillCooldowns.fireball = now;
     player.sp -= 25;
     playSound('fireball');
     let fb = new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshStandardMaterial({color:0xff4400, emissive:0xff0000}));
     fb.position.copy(hero.position).y = 1.2;
     scene.add(fb);
     fireballs.push({ mesh: fb, dir: lastDir.clone().normalize(), life: 80, type: "fire", damage: 40 });
+    updateSkillHotbar();
 }
 
 function castIceBlast(){
     if(player.sp < 30){ log("SP insuficiente!"); return; }
+    const now = Date.now();
+    if (now - skillCooldowns.iceblast < 1500) { log("Skill em cooldown!"); return; }
+    skillCooldowns.iceblast = now;
     player.sp -= 30;
     playSound('ice');
     let ice = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshStandardMaterial({color: 0x00ffff, emissive: 0x0088ff}));
     ice.position.copy(hero.position).y = 1.2;
     scene.add(ice);
     fireballs.push({ mesh: ice, dir: lastDir.clone().normalize(), life: 80, type: "ice", damage: 35 });
+    updateSkillHotbar();
 }
 
 function castThunderStrike(){
     if(player.sp < 35){ log("SP insuficiente!"); return; }
+    const now = Date.now();
+    if (now - skillCooldowns.thunder < 3000) { log("Skill em cooldown!"); return; }
+    skillCooldowns.thunder = now;
     player.sp -= 35;
     playSound('thunder');
     
@@ -920,6 +971,7 @@ function castThunderStrike(){
     setTimeout(() => scene.remove(lightning), 200);
     
     floatingText("⚡ THUNDER!", hero.position, "yellow");
+    updateSkillHotbar();
 }
 
 function usePotion(){
@@ -1050,7 +1102,12 @@ function updatePanels(){
         let isEquipped = Object.values(equipped).includes(it);
         if (!isEquipped) {
             let qty = it.stackable && it.quantity > 1 ? ` <span style="color:cyan">x${it.quantity}</span>` : '';
-            shopInventoryPanel.innerHTML+=`<div class='item'><span>${it.name}${qty}</span><button class='sell-btn' onclick='sellItem(${i})'>Vender (25G)</button></div>`;
+            let attrs = [];
+            if (it.atk) attrs.push(`<span style="color:#ff6b6b;font-size:10px;">+${it.atk} ATK</span>`);
+            if (it.def) attrs.push(`<span style="color:#4ecdc4;font-size:10px;">+${it.def} DEF</span>`);
+            if (it.hp) attrs.push(`<span style="color:#2ecc71;font-size:10px;">+${it.hp} HP</span>`);
+            let attrText = attrs.length > 0 ? `<br>${attrs.join(' ')}` : '';
+            shopInventoryPanel.innerHTML+=`<div class='item' style="flex-direction:column;align-items:flex-start;"><span>${it.name}${qty}${attrText}</span><button class='sell-btn' onclick='sellItem(${i})'>Vender (25G)</button></div>`;
         }
     });
     
@@ -1149,6 +1206,12 @@ function floatingText(txt,pos,color){
 /* -------- LOOP DE JOGO -------- */
 function animate(time){
     requestAnimationFrame(animate);
+    
+    // Se estiver pausado, não atualiza lógica do jogo (apenas renderiza)
+    if (isPaused) {
+        renderer.render(scene, camera);
+        return;
+    }
 
     let move = new THREE.Vector3(0,0,0);
     // Teclado
