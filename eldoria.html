@@ -434,14 +434,147 @@ let currentBiome = 0; // 0: Plains, 1: Forest, 2: Desert, 3: Snow, 4: Volcanic
 let gamePaused = false; // Controle de pausa do jogo
 let savedLevel = 1; // Nível salvo ao morrer para reviver no mesmo local
 
+// 🌙 CICLO DIA/NOITE
+let gameTime = 0; // 0-2400 (0-24 horas em ticks)
+const DAY_DURATION = 120000; // 2 minutos por ciclo completo (em ms)
+let lastTimeUpdate = Date.now();
+let isNight = false;
+
+// 💫 SISTEMA DE ELEMENTOS
+const ELEMENTS = {
+    NORMAL: 'normal',
+    FIRE: 'fire',
+    ICE: 'ice',
+    LIGHTNING: 'lightning',
+    DARK: 'dark',
+    HOLY: 'holy'
+};
+
+// Tabela de vantagens elementais (atacante -> defensor: multiplicador)
+const ELEMENT_ADVANTAGES = {
+    [ELEMENTS.FIRE]: { [ELEMENTS.ICE]: 2.0, [ELEMENTS.NORMAL]: 1.0, [ELEMENTS.FIRE]: 0.5, [ELEMENTS.WATER]: 0.5 },
+    [ELEMENTS.ICE]: { [ELEMENTS.FIRE]: 2.0, [ELEMENTS.NORMAL]: 1.0, [ELEMENTS.ICE]: 0.5, [ELEMENTS.LIGHTNING]: 0.5 },
+    [ELEMENTS.LIGHTNING]: { [ELEMENTS.ICE]: 2.0, [ELEMENTS.NORMAL]: 1.0, [ELEMENTS.LIGHTNING]: 0.5, [ELEMENTS.EARTH]: 0.5 },
+    [ELEMENTS.DARK]: { [ELEMENTS.HOLY]: 2.0, [ELEMENTS.NORMAL]: 1.0, [ELEMENTS.DARK]: 0.5, [ELEMENTS.HOLY]: 0.5 },
+    [ELEMENTS.HOLY]: { [ELEMENTS.DARK]: 2.0, [ELEMENTS.NORMAL]: 1.0, [ELEMENTS.HOLY]: 0.5, [ELEMENTS.DARK]: 0.5 },
+    [ELEMENTS.NORMAL]: { [ELEMENTS.NORMAL]: 1.0 }
+};
+
+// 👥 SISTEMA DE PETS
+let activePets = [];
+const PET_TYPES = {
+    WOLF: { name: 'Wolf Pet', element: ELEMENTS.NORMAL, baseAtk: 5, baseHp: 30, color: 0x8B4513, scale: 0.5 },
+    DRAGON: { name: 'Baby Dragon', element: ELEMENTS.FIRE, baseAtk: 12, baseHp: 50, color: 0xFF4500, scale: 0.6 },
+    SPIRIT: { name: 'Ice Spirit', element: ELEMENTS.ICE, baseAtk: 8, baseHp: 25, color: 0x00FFFF, scale: 0.4 },
+    THUNDER: { name: 'Thunder Bird', element: ELEMENTS.LIGHTNING, baseAtk: 10, baseHp: 35, color: 0xFFD700, scale: 0.45 },
+    SHADOW: { name: 'Shadow Wolf', element: ELEMENTS.DARK, baseAtk: 15, baseHp: 40, color: 0x4B0082, scale: 0.55 }
+};
+
+// 🔨 SISTEMA DE CRAFTING
+let craftingRecipes = [
+    { id: 1, name: 'Health Potion', result: { type: 'consumable', name: 'Health Potion', effect: 'heal', value: 50, stack: 1 }, materials: [{ name: 'Herb', qty: 3 }, { name: 'Water Bottle', qty: 1 }], craftTime: 2000 },
+    { id: 2, name: 'Iron Sword', result: { type: 'weapon', name: 'Iron Sword', atk: 15, durability: 100, rarity: 'common' }, materials: [{ name: 'Iron Ore', qty: 5 }, { name: 'Wood', qty: 2 }], craftTime: 5000 },
+    { id: 3, name: 'Fire Staff', result: { type: 'weapon', name: 'Fire Staff', atk: 20, element: ELEMENTS.FIRE, durability: 80, rarity: 'rare' }, materials: [{ name: 'Wood', qty: 3 }, { name: 'Fire Essence', qty: 2 }, { name: 'Crystal', qty: 1 }], craftTime: 8000 },
+    { id: 4, name: 'Ice Shield', result: { type: 'shield', name: 'Ice Shield', def: 12, element: ELEMENTS.ICE, durability: 120, rarity: 'rare' }, materials: [{ name: 'Iron Ore', qty: 4 }, { name: 'Ice Crystal', qty: 2 }], craftTime: 6000 },
+    { id: 5, name: 'Lightning Ring', result: { type: 'ring', name: 'Lightning Ring', atk: 5, element: ELEMENTS.LIGHTNING, rarity: 'epic' }, materials: [{ name: 'Gold Ore', qty: 3 }, { name: 'Lightning Essence', qty: 2 }], craftTime: 10000 },
+    { id: 6, name: 'Mana Potion', result: { type: 'consumable', name: 'Mana Potion', effect: 'mana', value: 40, stack: 1 }, materials: [{ name: 'Herb', qty: 2 }, { name: 'Magic Dust', qty: 1 }], craftTime: 2000 }
+];
+let isCrafting = false;
+
 // Sistema de Auto-Save
 let lastAutoSaveTime = 0;
 const AUTO_SAVE_INTERVAL = 30000; // 30 segundos em milissegundos
 
 // -------- ÁUDIO CHIPTUNE (estilo 8-bit) --------
 let _audioCtx = null;
+let currentMusicTrack = null;
+let musicGain = null;
+let ambientGain = null;
+
+// 🎵 TRILHA SONORA ADAPTATIVA
+const BIOME_MUSIC = {
+    0: { name: 'Plains', baseFreq: [261, 329, 392], tempo: 400 },  // C major
+    1: { name: 'Forest', baseFreq: [293, 349, 440], tempo: 450 },  // D minor
+    2: { name: 'Desert', baseFreq: [329, 415, 493], tempo: 500 },  // E major
+    3: { name: 'Snow', baseFreq: [349, 415, 523], tempo: 550 },    // F major
+    4: { name: 'Volcanic', baseFreq: [196, 247, 293], tempo: 350 } // G minor (dark)
+};
+
+function initMusicSystem() {
+    try {
+        let ctx = getAudioCtx();
+        musicGain = ctx.createGain();
+        musicGain.gain.value = 0.15;
+        musicGain.connect(ctx.destination);
+        
+        ambientGain = ctx.createGain();
+        ambientGain.gain.value = 0.08;
+        ambientGain.connect(ctx.destination);
+    } catch(e) {}
+}
+
+function playMusicLayer(freqs, tempo, layerType) {
+    try {
+        if (!musicGain) return;
+        let ctx = getAudioCtx();
+        let osc = ctx.createOscillator();
+        let gain = ctx.createGain();
+        
+        osc.connect(gain);
+        gain.connect(layerType === 'ambient' ? ambientGain : musicGain);
+        
+        osc.type = layerType === 'ambient' ? 'sine' : 'triangle';
+        osc.frequency.setValueAtTime(freqs[0], ctx.currentTime);
+        
+        // LFO para modulação
+        let lfo = ctx.createOscillator();
+        let lfoGain = ctx.createGain();
+        lfo.frequency.value = 0.5;
+        lfoGain.gain.value = 5;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfo.start();
+        
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 2);
+        
+        osc.start();
+        
+        // Parar após algum tempo e tocar próxima nota
+        setTimeout(() => {
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1);
+            osc.stop(ctx.currentTime + 1);
+        }, tempo * 2);
+        
+    } catch(e) {}
+}
+
+function updateAdaptiveMusic(inCombat) {
+    try {
+        if (!musicGain || !ambientGain) return;
+        let ctx = getAudioCtx();
+        
+        if (inCombat) {
+            musicGain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 1);
+            ambientGain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 1);
+        } else {
+            musicGain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 1);
+            ambientGain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 1);
+        }
+        
+        // Tocar camada musical baseada no bioma
+        let music = BIOME_MUSIC[currentBiome];
+        if (music && Math.random() < 0.02) {
+            playMusicLayer(music.baseFreq, music.tempo, 'base');
+        }
+    } catch(e) {}
+}
+
 function getAudioCtx() {
-    if(!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(!_audioCtx) {
+        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        initMusicSystem();
+    }
     return _audioCtx;
 }
 function playSound(type) {
@@ -1152,7 +1285,58 @@ function updateBiome() {
         
         // Atualizar decorações do bioma
         addBiomeDecorations();
+        
+        // 🎵 Atualizar música adaptativa para novo bioma
+        updateAdaptiveMusic(false);
     }
+}
+
+// 🌙 FUNÇÕES DO CICLO DIA/NOITE
+function updateDayNightCycle() {
+    const now = Date.now();
+    const delta = now - lastTimeUpdate;
+    
+    // Avançar tempo do jogo
+    gameTime += (delta / DAY_DURATION) * 2400;
+    if (gameTime >= 2400) gameTime -= 2400;
+    
+    // Determinar se é noite (18:00 - 6:00)
+    isNight = gameTime >= 1800 || gameTime < 600;
+    
+    // Calcular intensidade da luz baseada no horário
+    let lightIntensity = 1.0;
+    let skyColor = 0x87ceeb;
+    let fogColor = 0x87ceeb;
+    
+    if (isNight) {
+        // Noite: escuro com tons azulados
+        lightIntensity = 0.3;
+        skyColor = 0x0a0a2a;
+        fogColor = 0x1a1a3a;
+    } else if (gameTime >= 600 && gameTime < 800) {
+        // Amanhecer
+        lightIntensity = 0.5 + ((gameTime - 600) / 200) * 0.5;
+        skyColor = 0xffaa55;
+        fogColor = 0xffcc88;
+    } else if (gameTime >= 1700 && gameTime < 1900) {
+        // Entardecer
+        lightIntensity = 1.0 - ((gameTime - 1700) / 200) * 0.7;
+        skyColor = 0xff6633;
+        fogColor = 0xcc4422;
+    }
+    
+    // Aplicar mudanças na cena
+    sun.intensity = lightIntensity;
+    scene.background.lerp(new THREE.Color(skyColor), 0.05);
+    scene.fog.color.lerp(new THREE.Color(fogColor), 0.05);
+    
+    lastTimeUpdate = now;
+}
+
+function getDayNightDisplay() {
+    let hours = Math.floor(gameTime / 100);
+    let minutes = Math.floor((gameTime % 100) * 0.6);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${isNight ? '🌙' : '☀️'}`;
 }
 
 /* -------- PERSONAGEM E VISUAIS -------- */
@@ -1668,10 +1852,25 @@ function castFireball(){
     if(player.sp < 25){ log("SP insuficiente!"); return; }
     playSound('fireball');
     player.sp -= 25;
-    let fb = new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshStandardMaterial({color:0xff4400, emissive:0xff0000}));
+    
+    // 💫 Fireball com elemento (baseado na arma equipada)
+    let element = ELEMENTS.NORMAL;
+    let color = 0xff4400;
+    let emissive = 0xff0000;
+    
+    if (equipped.weapon && equipped.weapon.element) {
+        element = equipped.weapon.element;
+        if (element === ELEMENTS.FIRE) { color = 0xff4400; emissive = 0xff0000; }
+        else if (element === ELEMENTS.ICE) { color = 0x00ffff; emissive = 0x0088ff; }
+        else if (element === ELEMENTS.LIGHTNING) { color = 0xffd700; emissive = 0xffaa00; }
+        else if (element === ELEMENTS.DARK) { color = 0x8b00ff; emissive = 0x4400aa; }
+        else if (element === ELEMENTS.HOLY) { color = 0xffffaa; emissive = 0xffdd44; }
+    }
+    
+    let fb = new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshStandardMaterial({color: color, emissive: emissive}));
     fb.position.copy(hero.position).y = 1.2;
     scene.add(fb);
-    fireballs.push({ mesh: fb, dir: lastDir.clone().normalize(), life: 80 });
+    fireballs.push({ mesh: fb, dir: lastDir.clone().normalize(), life: 80, element: element });
 }
 
 // Habilidade AOE (Area of Effect) - desbloqueada no nível 12
@@ -1823,7 +2022,22 @@ function attack(){
         if (t >= Math.PI / 2 && t < Math.PI / 2 + animSpeed) {
             monsters.forEach(m => {
                 if(hero.position.distanceTo(m.position) < 4.5){
-                    let dmg = player.atk + Math.floor(Math.random()*5);
+                    let baseDmg = player.atk + Math.floor(Math.random()*5);
+                    
+                    // 💫 SISTEMA DE ELEMENTOS - Calcular dano elemental
+                    let element = ELEMENTS.NORMAL;
+                    if (equipped.weapon && equipped.weapon.element) {
+                        element = equipped.weapon.element;
+                    }
+                    
+                    let monsterElement = m.userData.element || ELEMENTS.NORMAL;
+                    let elementMultiplier = 1.0;
+                    
+                    if (ELEMENT_ADVANTAGES[element] && ELEMENT_ADVANTAGES[element][monsterElement]) {
+                        elementMultiplier = ELEMENT_ADVANTAGES[element][monsterElement];
+                    }
+                    
+                    let dmg = Math.floor(baseDmg * elementMultiplier);
                     
                     // Verifica crítico
                     let isCrit = false;
@@ -1833,7 +2047,20 @@ function attack(){
                     }
                     
                     m.userData.hp -= dmg; 
-                    floatingText("-"+dmg, m.position, isCrit ? "red" : "orange");
+                    
+                    // Mostrar texto de dano com cor baseada no elemento
+                    let damageColor = isCrit ? "red" : "orange";
+                    if (element === ELEMENTS.FIRE) damageColor = "#ff4500";
+                    else if (element === ELEMENTS.ICE) damageColor = "#00ffff";
+                    else if (element === ELEMENTS.LIGHTNING) damageColor = "#ffd700";
+                    else if (element === ELEMENTS.DARK) damageColor = "#8b00ff";
+                    else if (element === ELEMENTS.HOLY) damageColor = "#ffffaa";
+                    
+                    let damageText = "-" + dmg;
+                    if (elementMultiplier > 1.0) damageText = "💥 " + damageText;
+                    else if (elementMultiplier < 1.0) damageText = "🛡️ " + damageText;
+                    
+                    floatingText(damageText, m.position, damageColor);
                     
                     // Aplica lifesteal
                     if(player.lifesteal && player.lifesteal > 0) {
@@ -2727,6 +2954,16 @@ function animate(time){
     // Atualizar bioma baseado no nível
     updateBiome();
     
+    // 🌙 CICLO DIA/NOITE - Atualizar a cada frame
+    updateDayNightCycle();
+    
+    // 👥 SISTEMA DE PETS - Atualizar pets
+    updatePets();
+    
+    // 🎵 MÚSICA ADAPTATIVA - Verificar se está em combate
+    let inCombat = monsters.some(m => m.position.distanceTo(hero.position) < 30);
+    updateAdaptiveMusic(inCombat);
+    
     // Regeneração de SP (usa player.maxSp que já inclui bônus via recalcStats)
     player.sp = Math.min(player.maxSp, player.sp+0.1);
 
@@ -2780,12 +3017,36 @@ function animate(time){
         monsters.forEach(m=>{
             if(f.mesh.position.distanceTo(m.position)<3.5){
                 let baseDmg = 40;
+                
+                // 💫 SISTEMA DE ELEMENTOS - Dano elemental na fireball
+                let element = f.element || ELEMENTS.NORMAL;
+                let monsterElement = m.userData.element || ELEMENTS.NORMAL;
+                let elementMultiplier = 1.0;
+                
+                if (ELEMENT_ADVANTAGES[element] && ELEMENT_ADVANTAGES[element][monsterElement]) {
+                    elementMultiplier = ELEMENT_ADVANTAGES[element][monsterElement];
+                }
+                
                 // Aplica bônus de dano da skill tree
                 if(player.fireballDamageBonus) {
                     baseDmg *= (1 + player.fireballDamageBonus / 100);
                 }
-                m.userData.hp -= baseDmg; 
-                floatingText("-" + Math.round(baseDmg), m.position, "red"); 
+                
+                let dmg = Math.floor(baseDmg * elementMultiplier);
+                m.userData.hp -= dmg; 
+                
+                // Cor do dano baseada no elemento
+                let damageColor = "red";
+                if (element === ELEMENTS.FIRE) damageColor = "#ff4500";
+                else if (element === ELEMENTS.ICE) damageColor = "#00ffff";
+                else if (element === ELEMENTS.LIGHTNING) damageColor = "#ffd700";
+                else if (element === ELEMENTS.DARK) damageColor = "#8b00ff";
+                else if (element === ELEMENTS.HOLY) damageColor = "#ffffaa";
+                
+                let damageText = "-" + Math.round(dmg);
+                if (elementMultiplier > 1.0) damageText = "💥 " + damageText;
+                
+                floatingText(damageText, m.position, damageColor); 
                 f.life=0;
                 if(m.userData.hp <= 0) killMonster(m);
             }
