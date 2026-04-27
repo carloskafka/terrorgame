@@ -344,15 +344,10 @@ html,body{ margin:0; width:100%; height:100%; overflow:hidden; background:black;
 
 <div id="statusWindow">
     <button onclick="toggleV()" class="close-btn">×</button>
-    <h2>🎒 Inventário & Personagem</h2>
+    <h2>🎒 Inventário</h2>
     <div id="statsPanel" style="background:rgba(255,255,255,0.1); padding:10px; border-radius:8px; margin-bottom:10px;"></div>
     <h3>⚔️ Equipamento</h3>
     <div id="equippedPanel"></div>
-    <!-- Pet Equipado -->
-    <div id="petEquippedDisplay" style="margin-top:10px; padding:10px; background:rgba(78,205,196,0.1); border-radius:8px; display:none;">
-        <h4 style="color:#4ecdc4; margin:0 0 8px 0;">🐾 Pet Ativo</h4>
-        <div id="petStatsDisplay"></div>
-    </div>
     <h3>🎒 Mochila</h3>
     <div id="inventoryPanel" class="inventory-grid"></div>
 </div>
@@ -713,959 +708,9 @@ let evolutionData = {
         aoeUses: 0,
         desertKills: 0,
         iceKills: 0,
-        fireKills: 0,
-        dungeonCompletions: 0,
-        dailyLoginStreak: 0,
-        lastLoginDate: null,
-        eventsCompleted: 0
+        fireKills: 0
     }
 };
-
-// ==================== NOVAS FEATURES ====================
-
-// Feature 1: Sistema de Crafting
-const craftingRecipes = [
-    { id: 'health_potion', name: 'Poção de Vida', icon: '🧪', category: 'consumable', ingredients: [{item: 'Herb', qty: 3}, {item: 'Water Essence', qty: 1}], result: {name: 'Health Potion', type: 'consumable', rarity: 'common', effect: 'heal', value: 50}, craftTime: 2000 },
-    { id: 'mana_potion', name: 'Poção de Mana', icon: '💧', category: 'consumable', ingredients: [{item: 'Herb', qty: 2}, {item: 'Crystal Shard', qty: 1}], result: {name: 'Mana Potion', type: 'consumable', rarity: 'common', effect: 'mana', value: 40}, craftTime: 2000 },
-    { id: 'iron_sword', name: 'Espada de Ferro', icon: '🗡️', category: 'weapon', ingredients: [{item: 'Iron Ore', qty: 5}, {item: 'Wood', qty: 3}], result: {name: 'Iron Sword', type: 'weapon', slot: 'weapon', rarity: 'common', atk: 15, def: 2, durability: 100, value: 50}, craftTime: 5000 },
-    { id: 'steel_sword', name: 'Espada de Aço', icon: '⚔️', category: 'weapon', ingredients: [{item: 'Steel Bar', qty: 4}, {item: 'Leather', qty: 2}, {item: 'Crystal Shard', qty: 1}], result: {name: 'Steel Sword', type: 'weapon', slot: 'weapon', rarity: 'rare', atk: 28, def: 5, durability: 150, value: 120}, craftTime: 8000 },
-    { id: 'dragon_blade', name: 'Lâmina do Dragão', icon: '🐉', category: 'weapon', ingredients: [{item: 'Dragon Scale', qty: 5}, {item: 'Steel Bar', qty: 10}, {item: 'Fire Essence', qty: 3}], result: {name: 'Dragon Blade', type: 'weapon', slot: 'weapon', rarity: 'legendary', atk: 55, def: 12, durability: 200, value: 500, bonus: {fireDmg: 20}}, craftTime: 15000 },
-    { id: 'wooden_shield', name: 'Escudo de Madeira', icon: '🛡️', category: 'armor', ingredients: [{item: 'Wood', qty: 6}, {item: 'Leather', qty: 2}], result: {name: 'Wooden Shield', type: 'shield', slot: 'shield', rarity: 'common', atk: 2, def: 12, durability: 80, value: 40}, craftTime: 4000 },
-    { id: 'iron_armor', name: 'Armadura de Ferro', icon: '🦾', category: 'armor', ingredients: [{item: 'Iron Ore', qty: 8}, {item: 'Leather', qty: 4}], result: {name: 'Iron Armor', type: 'armor', slot: 'chest', rarity: 'uncommon', atk: 5, def: 25, durability: 120, value: 100}, craftTime: 7000 },
-    { id: 'dragon_armor', name: 'Armadura de Dragão', icon: '🐲', category: 'armor', ingredients: [{item: 'Dragon Scale', qty: 8}, {item: 'Steel Bar', qty: 12}, {item: 'Ancient Rune', qty: 2}], result: {name: 'Dragon Armor', type: 'armor', slot: 'chest', rarity: 'legendary', atk: 15, def: 50, durability: 250, value: 800, bonus: {fireRes: 30}}, craftTime: 20000 },
-    { id: 'speed_boots', name: 'Botas da Velocidade', icon: '👢', category: 'armor', ingredients: [{item: 'Leather', qty: 5}, {item: 'Wind Essence', qty: 2}, {item: 'Feather', qty: 3}], result: {name: 'Speed Boots', type: 'boots', slot: 'boots', rarity: 'rare', atk: 3, def: 8, durability: 100, value: 150, bonus: {speed: 15}}, craftTime: 6000 },
-    { id: 'ring_power', name: 'Anel do Poder', icon: '💍', category: 'accessory', ingredients: [{item: 'Gold Bar', qty: 3}, {item: 'Crystal Shard', qty: 5}, {item: 'Ancient Rune', qty: 1}], result: {name: 'Ring of Power', type: 'ring', slot: 'ring1', rarity: 'epic', atk: 12, def: 8, durability: 200, value: 300, bonus: {allStats: 10}}, craftTime: 10000 },
-    { id: 'strength_elixir', name: 'Elixir de Força', icon: '💪', category: 'consumable', ingredients: [{item: 'Herb', qty: 5}, {item: 'Fire Essence', qty: 2}, {item: 'Crystal Shard', qty: 2}], result: {name: 'Strength Elixir', type: 'consumable', rarity: 'rare', effect: 'buff_atk', value: 25, duration: 60000}, craftTime: 4000 },
-    { id: 'defense_elixir', name: 'Elixir de Defesa', icon: '🛡️', category: 'consumable', ingredients: [{item: 'Herb', qty: 5}, {item: 'Earth Essence', qty: 2}, {item: 'Iron Ore', qty: 3}], result: {name: 'Defense Elixir', type: 'consumable', rarity: 'rare', effect: 'buff_def', value: 20, duration: 60000}, craftTime: 4000 }
-];
-
-let craftingQueue = [];
-let isCrafting = false;
-
-// Feature 2: Dungeons Procedurais
-const dungeonConfig = {
-    minRooms: 3,
-    maxRooms: 7,
-    roomSize: 40,
-    corridorWidth: 8,
-    enemyDensity: 0.3,
-    chestChance: 0.4,
-    bossRoomChance: 1.0
-};
-
-let currentDungeon = null;
-let dungeonRooms = [];
-let dungeonCorridors = [];
-let dungeonEnemies = [];
-let dungeonChests = [];
-let dungeonExit = null;
-let isInDungeon = false;
-let dungeonLevel = 1;
-
-// Feature 3: Sistema de Pets
-const petTypes = [
-    { id: 'wolf_pup', name: 'Filhote de Lobo', icon: '🐺', type: 'combat', baseStats: {atk: 5, hp: 30}, bonus: {atk: 5, critChance: 2}, unlockLevel: 5, source: 'drop', dropRate: 0.05, evolution: { level: 10, id: 'dire_wolf', name: 'Lobo Uivador', icon: '🐺' } },
-    { id: 'fairy', name: 'Fada Mística', icon: '🧚', type: 'support', baseStats: {hp: 20, spRegen: 2}, bonus: {spRegen: 2, manaRegen: 3}, unlockLevel: 8, source: 'drop', dropRate: 0.03, evolution: { level: 10, id: 'arch_fairy', name: 'Arquifada', icon: '🧚‍♀️' } },
-    { id: 'baby_dragon', name: 'Dragão Bebê', icon: '🐲', type: 'combat', baseStats: {atk: 12, hp: 50}, bonus: {atk: 10, fireDmg: 15}, unlockLevel: 15, source: 'boss', dropRate: 0.02, evolution: { level: 15, id: 'ancient_dragon', name: 'Dragão Ancião', icon: '🐉' } },
-    { id: 'spirit_wolf', name: 'Lobo Espiritual', icon: '🐺', type: 'combat', baseStats: {atk: 8, hp: 40}, bonus: {atk: 8, speed: 10}, unlockLevel: 12, source: 'dungeon', dropRate: 0.04, evolution: { level: 12, id: 'alpha_wolf', name: 'Lobo Alfa', icon: '🐺' } },
-    { id: 'golem', name: 'Golem de Pedra', icon: '🗿', type: 'tank', baseStats: {hp: 100, def: 15}, bonus: {def: 15, hp: 50}, unlockLevel: 10, source: 'drop', dropRate: 0.04, evolution: { level: 15, id: 'iron_golem', name: 'Golem de Ferro', icon: '🤖' } },
-    { id: 'phoenix', name: 'Fênix', icon: '🔥', type: 'support', baseStats: {hp: 60, spRegen: 3}, bonus: {revive: true, fireRes: 20}, unlockLevel: 20, source: 'boss', dropRate: 0.01, evolution: { level: 20, id: 'cosmic_phoenix', name: 'Fênix Cósmica', icon: '🌟' } },
-    { id: 'owl', name: 'Coruja Sábia', icon: '🦉', type: 'support', baseStats: {spRegen: 3, xp: 5}, bonus: {xpBonus: 10, spRegen: 2}, unlockLevel: 7, source: 'quest', dropRate: 0, evolution: { level: 10, id: 'great_owl', name: 'Grande Coruja', icon: '🦅' } },
-    { id: 'slime_king', name: 'Rei Slime', icon: '👑', type: 'tank', baseStats: {hp: 80, def: 10}, bonus: {def: 12, hpRegen: 2}, unlockLevel: 6, source: 'drop', dropRate: 0.06, evolution: { level: 12, id: 'slime_emperor', name: 'Imperador Slime', icon: '🤴' } }
-];
-
-let activePet = null;
-let petsCollection = [];
-let petXpSystem = { level: 1, xp: 0, next: 100 };
-let petMesh = null; // Mesh 3D do pet ativo
-
-// Feature 4: Object Pooling para Performance
-const objectPools = {
-    monsters: [],
-    fireballs: [],
-    floatTexts: [],
-    droppedItems: [],
-    particles: []
-};
-
-const POOL_CONFIG = {
-    monsters: { initial: 50, max: 200 },
-    fireballs: { initial: 30, max: 100 },
-    floatTexts: { initial: 50, max: 200 },
-    droppedItems: { initial: 30, max: 150 },
-    particles: { initial: 100, max: 500 }
-};
-
-// Feature 5: Eventos Diários e Sazonais
-const dailyEvents = [
-    { id: 'double_xp', name: 'XP em Dobro', icon: '⭐', description: 'Ganhe 2x XP de todas as fontes', active: false, endTime: null, schedule: 'weekend' },
-    { id: 'double_gold', name: 'Gold em Dobro', icon: '💰', description: 'Ganhe 2x gold de drops e vendas', active: false, endTime: null, schedule: 'wednesday' },
-    { id: 'boss_rush', name: 'Boss Rush', icon: '👹', description: 'Bosses spawnam com mais frequência', active: false, endTime: null, schedule: 'friday' },
-    { id: 'rare_drops', name: 'Drops Raros', icon: '💎', description: 'Chance aumentada de itens raros', active: false, endTime: null, schedule: 'sunday' },
-    { id: 'free_craft', name: 'Crafting Grátis', icon: '🔨', description: 'Crafting instantâneo sem materiais', active: false, endTime: null, schedule: 'monthly' }
-];
-
-let dailyRewards = {
-    streak: 0,
-    lastClaim: null,
-    rewards: [
-        { day: 1, gold: 50, xp: 25, item: null },
-        { day: 2, gold: 75, xp: 50, item: 'Health Potion' },
-        { day: 3, gold: 100, xp: 75, item: null },
-        { day: 4, gold: 150, xp: 100, item: 'Mana Potion' },
-        { day: 5, gold: 200, xp: 150, item: null },
-        { day: 6, gold: 250, xp: 200, item: 'Strength Elixir' },
-        { day: 7, gold: 500, xp: 300, item: 'Rare Chest Key' }
-    ]
-};
-
-let seasonalEvent = {
-    active: false,
-    name: '',
-    startDate: null,
-    endDate: null,
-    specialDrops: [],
-    bonusMultiplier: 1.0
-};
-
-// ==================== FUNÇÕES DAS NOVAS FEATURES ====================
-
-// Feature 1: Sistema de Crafting - Funções
-function openCraftingWindow() {
-    // Se já estiver aberta, não faz nada (evita bug de abrir múltiplas janelas)
-    const existing = document.getElementById('craftingWindow');
-    if (existing) {
-        return; // Já está aberta, não faz nada
-    }
-    
-    gamePaused = true;
-    let craftingHTML = `
-        <div id="craftingWindow" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:700px;max-height:80vh;overflow-y:auto;background:linear-gradient(135deg, rgba(5,15,35,.98), rgba(15,25,45,.98));border-radius:20px;border:3px solid #5ab9ff;z-index:5000;padding:25px;box-shadow:0 0 50px rgba(90,185,255,0.3);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                <h2 style="color:#5ab9ff;margin:0;font-size:28px;">🔨 Crafting</h2>
-                <button onclick="closeCraftingWindow()" style="background:transparent;border:none;color:#aaa;font-size:28px;cursor:pointer;">&times;</button>
-            </div>
-            
-            <!-- Materiais do Jogador -->
-            <div style="background:rgba(0,0,0,0.3);border-radius:12px;padding:15px;margin-bottom:20px;">
-                <h3 style="color:#ffd66b;margin:0 0 10px 0;font-size:16px;">📦 Seus Materiais</h3>
-                <div id="playerMaterials" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
-            </div>
-            
-            <!-- Filtro por Categoria -->
-            <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
-                <button onclick="renderCraftingRecipes('all')" style="padding:8px 16px;border-radius:8px;border:1px solid #5ab9ff;background:rgba(90,185,255,0.2);color:white;cursor:pointer;">Todos</button>
-                <button onclick="renderCraftingRecipes('weapon')" style="padding:8px 16px;border-radius:8px;border:1px solid #ff6b6b;background:rgba(255,107,107,0.2);color:white;cursor:pointer;">⚔️ Armas</button>
-                <button onclick="renderCraftingRecipes('armor')" style="padding:8px 16px;border-radius:8px;border:1px solid #4ecdc4;background:rgba(78,205,196,0.2);color:white;cursor:pointer;">🛡️ Armaduras</button>
-                <button onclick="renderCraftingRecipes('consumable')" style="padding:8px 16px;border-radius:8px;border:1px solid #ffe66d;background:rgba(255,230,109,0.2);color:white;cursor:pointer;">🧪 Consumíveis</button>
-                <button onclick="renderCraftingRecipes('accessory')" style="padding:8px 16px;border-radius:8px;border:1px solid #c44ec4;background:rgba(196,78,196,0.2);color:white;cursor:pointer;">💍 Acessórios</button>
-            </div>
-            
-            <!-- Lista de Receitas -->
-            <div id="craftingRecipesList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:15px;"></div>
-            
-            <!-- Fila de Crafting -->
-            <div id="craftingQueueDisplay" style="margin-top:20px;background:rgba(0,0,0,0.3);border-radius:12px;padding:15px;display:none;">
-                <h3 style="color:#4ecdc4;margin:0 0 10px 0;font-size:16px;">⏳ Fila de Crafting</h3>
-                <div id="queueItems"></div>
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', craftingHTML);
-    updatePlayerMaterials();
-    renderCraftingRecipes('all');
-}
-
-function closeCraftingWindow() {
-    const win = document.getElementById('craftingWindow');
-    if (win) win.remove();
-    gamePaused = false;
-}
-
-function updatePlayerMaterials() {
-    const materialsDiv = document.getElementById('playerMaterials');
-    if (!materialsDiv) return;
-    
-    const materials = inventory.filter(item => item.type === 'material');
-    const materialCount = {};
-    materials.forEach(m => {
-        materialCount[m.name] = (materialCount[m.name] || 0) + 1;
-    });
-    
-    if (Object.keys(materialCount).length === 0) {
-        materialsDiv.innerHTML = '<span style="color:#666;font-style:italic;">Nenhum material encontrado</span>';
-        return;
-    }
-    
-    materialsDiv.innerHTML = Object.entries(materialCount).map(([name, count]) => 
-        `<span style="background:rgba(255,214,107,0.1);border:1px solid #ffd66b;border-radius:8px;padding:6px 12px;color:#ffd66b;font-size:14px;">${name} x${count}</span>`
-    ).join('');
-}
-
-function getMaterialCount(itemName) {
-    return inventory.filter(i => i.name === itemName && i.type === 'material').length;
-}
-
-function canCraft(recipe) {
-    for (let ing of recipe.ingredients) {
-        if (getMaterialCount(ing.item) < ing.qty) return false;
-    }
-    return true;
-}
-
-function removeIngredients(recipe) {
-    for (let ing of recipe.ingredients) {
-        let removed = 0;
-        inventory = inventory.filter(item => {
-            if (item.name === ing.item && item.type === 'material' && removed < ing.qty) {
-                removed++;
-                return false;
-            }
-            return true;
-        });
-    }
-}
-
-function craftItem(recipeId) {
-    const recipe = craftingRecipes.find(r => r.id === recipeId);
-    if (!recipe) return;
-    
-    if (!canCraft(recipe)) {
-        log('<span style="color:red">❌ Materiais insuficientes!</span>');
-        playSound('error');
-        return;
-    }
-    
-    removeIngredients(recipe);
-    
-    // Evento de crafting grátis
-    const freeCraftEvent = dailyEvents.find(e => e.id === 'free_craft' && e.active);
-    const craftTime = freeCraftEvent ? 100 : recipe.craftTime;
-    
-    craftingQueue.push({
-        recipe: recipe,
-        startTime: Date.now(),
-        craftTime: craftTime
-    });
-    
-    if (!isCrafting) processCraftingQueue();
-    updatePlayerMaterials();
-    renderCraftingRecipes('all');
-    log(`<span style="color:cyan">🔨 Craftando ${recipe.name}...</span>`);
-}
-
-function processCraftingQueue() {
-    if (craftingQueue.length === 0) {
-        isCrafting = false;
-        return;
-    }
-    
-    isCrafting = true;
-    const current = craftingQueue[0];
-    const elapsed = Date.now() - current.startTime;
-    
-    if (elapsed >= current.craftTime) {
-        // Crafting completado
-        const craftedItem = createItem(current.recipe.result);
-        addItemToInventory(craftedItem);
-        log(`<span style="color:#4ecdc4">✅ ${current.recipe.name} criado!</span>`);
-        playSound('coin');
-        craftingQueue.shift();
-        
-        // Quest progress
-        updateQuestProgress('items_crafted', 1);
-        
-        processCraftingQueue();
-    } else {
-        setTimeout(() => processCraftingQueue(), 100);
-    }
-    
-    updateCraftingQueueDisplay();
-}
-
-function updateCraftingQueueDisplay() {
-    const queueDiv = document.getElementById('craftingQueueDisplay');
-    const queueItems = document.getElementById('queueItems');
-    if (!queueDiv || !queueItems) return;
-    
-    if (craftingQueue.length === 0) {
-        queueDiv.style.display = 'none';
-        return;
-    }
-    
-    queueDiv.style.display = 'block';
-    queueItems.innerHTML = craftingQueue.map((q, i) => {
-        const elapsed = Date.now() - q.startTime;
-        const progress = Math.min(100, (elapsed / q.craftTime) * 100);
-        return `
-            <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:10px;margin-bottom:8px;">
-                <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-                    <span style="color:white;">${q.recipe.icon} ${q.recipe.name}</span>
-                    <span style="color:#4ecdc4;">${Math.max(0, ((q.craftTime - elapsed)/1000).toFixed(1))}s</span>
-                </div>
-                <div style="height:6px;background:#333;border-radius:3px;overflow:hidden;">
-                    <div style="height:100%;width:${progress}%;background:linear-gradient(90deg,#4ecdc4,#5ab9ff);transition:width 0.1s;"></div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderCraftingRecipes(category) {
-    const listDiv = document.getElementById('craftingRecipesList');
-    if (!listDiv) return;
-    
-    const filtered = category === 'all' 
-        ? craftingRecipes 
-        : craftingRecipes.filter(r => r.category === category);
-    
-    listDiv.innerHTML = filtered.map(recipe => {
-        const can = canCraft(recipe);
-        const rarityColors = { common: '#a0a0a0', uncommon: '#4ecdc4', rare: '#5ab9ff', epic: '#c44ec4', legendary: '#ffd66b' };
-        const rarityColor = rarityColors[recipe.result.rarity] || '#fff';
-        
-        return `
-            <div style="background:rgba(0,0,0,0.3);border:2px solid ${rarityColor};border-radius:12px;padding:15px;opacity:${can ? 1 : 0.6};">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                    <span style="font-size:24px;">${recipe.icon}</span>
-                    <span style="color:${rarityColor};font-weight:bold;font-size:12px;text-transform:uppercase;">${recipe.result.rarity}</span>
-                </div>
-                <h4 style="color:white;margin:0 0 5px 0;">${recipe.name}</h4>
-                <div style="color:#888;font-size:12px;margin-bottom:10px;">Tempo: ${(recipe.craftTime/1000).toFixed(1)}s</div>
-                <div style="margin-bottom:10px;">
-                    <div style="color:#aaa;font-size:11px;margin-bottom:5px;">Ingredientes:</div>
-                    ${recipe.ingredients.map(ing => {
-                        const has = getMaterialCount(ing.item);
-                        const ok = has >= ing.qty;
-                        return `<div style="color:${ok ? '#4ecdc4' : '#ff6b6b'};font-size:12px;">• ${ing.item} x${ing.qty} (${has})</div>`;
-                    }).join('')}
-                </div>
-                <button onclick="craftItem('${recipe.id}')" ${!can ? 'disabled' : ''} 
-                    style="width:100%;padding:10px;border-radius:8px;border:none;background:${can ? 'linear-gradient(135deg,#4ecdc4,#5ab9ff)' : '#444'};color:white;font-weight:bold;cursor:${can ? 'pointer' : 'not-allowed'};">
-                    ${can ? '🔨 Craftar' : '❌ Sem materiais'}
-                </button>
-            </div>
-        `;
-    }).join('');
-}
-
-// Feature 2: Dungeons Procedurais
-function generateDungeon(level) {
-    dungeonLevel = level;
-    dungeonRooms = [];
-    dungeonCorridors = [];
-    dungeonEnemies = [];
-    dungeonChests = [];
-    
-    const numRooms = Math.floor(Math.random() * (dungeonConfig.maxRooms - dungeonConfig.minRooms + 1)) + dungeonConfig.minRooms;
-    
-    // Gerar salas
-    for (let i = 0; i < numRooms; i++) {
-        let room;
-        let attempts = 0;
-        do {
-            room = {
-                x: (Math.random() - 0.5) * 400,
-                z: (Math.random() - 0.5) * 400,
-                width: dungeonConfig.roomSize + Math.random() * 20,
-                depth: dungeonConfig.roomSize + Math.random() * 20,
-                type: i === numRooms - 1 ? 'boss' : (Math.random() < dungeonConfig.chestChance ? 'chest' : 'normal'),
-                enemies: [],
-                cleared: false
-            };
-            attempts++;
-        } while (checkRoomOverlap(room) && attempts < 50);
-        
-        if (attempts < 50) {
-            dungeonRooms.push(room);
-        }
-    }
-    
-    // Conectar salas com corredores
-    for (let i = 1; i < dungeonRooms.length; i++) {
-        const prev = dungeonRooms[i-1];
-        const curr = dungeonRooms[i];
-        dungeonCorridors.push({
-            x1: prev.x,
-            z1: prev.z,
-            x2: curr.x,
-            z2: curr.z
-        });
-    }
-    
-    // Spawnar inimigos
-    dungeonRooms.forEach(room => {
-        if (room.type !== 'boss') {
-            const enemyCount = Math.floor(room.width * room.depth / 200 * dungeonConfig.enemyDensity * dungeonLevel);
-            for (let j = 0; j < enemyCount; j++) {
-                room.enemies.push({
-                    x: room.x + (Math.random() - 0.5) * room.width * 0.8,
-                    z: room.z + (Math.random() - 0.5) * room.depth * 0.8,
-                    type: getRandomDungeonEnemy(),
-                    defeated: false
-                });
-            }
-        }
-    });
-    
-    isInDungeon = true;
-    log(`<span style="color:cyan">🚪 Você entrou na Masmorra Nível ${dungeonLevel}!</span>`);
-}
-
-function checkRoomOverlap(newRoom) {
-    for (let room of dungeonRooms) {
-        const dx = Math.abs(room.x - newRoom.x);
-        const dz = Math.abs(room.z - newRoom.z);
-        if (dx < (room.width + newRoom.width) / 2 + 20 && dz < (room.depth + newRoom.depth) / 2 + 20) {
-            return true;
-        }
-    }
-    return false;
-}
-
-function getRandomDungeonEnemy() {
-    const dungeonEnemies = ['Skeleton', 'Ghost', 'Golem', 'Dark Knight', 'Demon'];
-    return dungeonEnemies[Math.floor(Math.random() * dungeonEnemies.length)];
-}
-
-function enterDungeon() {
-    if (isInDungeon) {
-        // Verifica se ainda está dentro da dungeon
-        if (checkInDungeon()) {
-            log('<span style="color:orange">Você já está em uma masmorra!</span>');
-            return;
-        }
-        // Se saiu da dungeon, permite entrar novamente
-        isInDungeon = false;
-        dungeonRooms = [];
-    }
-    
-    // Gerar nova dungeon
-    generateDungeon(1);
-    
-    // Aguardar a geração da dungeon antes de teleportar
-    setTimeout(() => {
-        if (dungeonRooms.length > 0) {
-            // Teleportar para entrada da dungeon
-            hero.position.set(dungeonRooms[0].x, 0, dungeonRooms[0].z);
-            // Forçar flag para true após gerar
-            isInDungeon = true;
-        }
-    }, 100);
-}
-
-function exitDungeon() {
-    if (!isInDungeon) return;
-    isInDungeon = false;
-    evolutionData.stats.dungeonCompletions++;
-    log('<span style="color:green">✅ Masmorra completada!</span>');
-    // Recompensas
-    player.gold += 50 * dungeonLevel;
-    player.xp += 100 * dungeonLevel;
-    checkLevel();
-    updatePanels();
-}
-
-// Feature 3: Sistema de Pets
-function addPetToCollection(petId) {
-    const petType = petTypes.find(p => p.id === petId);
-    if (!petType) return false;
-    
-    // Verificar se já tem o pet
-    if (petsCollection.find(p => p.id === petId)) {
-        log('<span style="color:orange">Você já tem este pet!</span>');
-        return false;
-    }
-    
-    const newPet = {
-        ...petType,
-        level: 1,
-        xp: 0,
-        nextXp: 100,
-        obtainedAt: Date.now()
-    };
-    
-    petsCollection.push(newPet);
-    log(`<span style="color:cyan">🎉 Novo pet obtido: ${newPet.name}!</span>`);
-    playSound('coin');
-    return true;
-}
-
-function equipPet(petId) {
-    const pet = petsCollection.find(p => p.id === petId);
-    if (!pet) return;
-    
-    // Fechar janela de pets se estiver aberta
-    closePetsWindow();
-    
-    activePet = pet;
-    applyPetBonuses();
-    createPetMesh(); // Criar mesh 3D do pet
-    log(`<span style="color:#4ecdc4">🐾 ${pet.name} agora está ativo!</span>`);
-    recalcStats();
-    // Atualizar UI se a janela de status estiver aberta
-    updatePanels();
-}
-
-function unequipPet() {
-    if (!activePet) return;
-    removePetBonuses();
-    log(`<span style="color:#888">${activePet.name} foi guardado.</span>`);
-    activePet = null;
-    removePetMesh(); // Remover mesh 3D do pet
-    recalcStats();
-    // Atualizar UI se a janela de status estiver aberta
-    updatePanels();
-    // Atualizar janela de pets se estiver aberta
-    const petsWin = document.getElementById('petsWindow');
-    if (petsWin) {
-        closePetsWindow();
-        showPetsWindow();
-    }
-}
-
-function applyPetBonuses() {
-    if (!activePet) return;
-    const bonus = activePet.bonus;
-    for (let [stat, value] of Object.entries(bonus)) {
-        if (!player.petBonus) player.petBonus = {};
-        player.petBonus[stat] = (player.petBonus[stat] || 0) + value;
-    }
-}
-
-function removePetBonuses() {
-    if (!activePet || !player.petBonus) return;
-    const bonus = activePet.bonus;
-    for (let [stat, value] of Object.entries(bonus)) {
-        if (player.petBonus[stat]) {
-            player.petBonus[stat] -= value;
-            if (player.petBonus[stat] <= 0) delete player.petBonus[stat];
-        }
-    }
-}
-
-// Função para verificar se o jogador está em dungeon
-function checkInDungeon() {
-    // Verifica se o jogador está dentro de alguma sala da dungeon
-    if (!isInDungeon || dungeonRooms.length === 0) return false;
-    
-    for (let room of dungeonRooms) {
-        const halfWidth = room.width / 2;
-        const halfDepth = room.depth / 2;
-        
-        if (hero.position.x >= room.x - halfWidth && 
-            hero.position.x <= room.x + halfWidth &&
-            hero.position.z >= room.z - halfDepth && 
-            hero.position.z <= room.z + halfDepth) {
-            return true;
-        }
-    }
-    
-    // Se saiu da dungeon, retorna ao mundo normal
-    exitDungeon();
-    return false;
-}
-
-function gainPetXp(amount) {
-    if (!activePet) return;
-    
-    const xpBonus = activePet.bonus.xpBonus || 0;
-    amount = amount * (1 + xpBonus / 100);
-    
-    activePet.xp += amount;
-    if (activePet.xp >= activePet.nextXp) {
-        activePet.level++;
-        activePet.xp = 0;
-        activePet.nextXp = Math.floor(activePet.nextXp * 1.5);
-        log(`<span style="color:cyan">🎉 ${activePet.name} subiu para o nível ${activePet.level}!</span>`);
-        playSound('levelup');
-    }
-}
-
-// Criar mesh 3D do pet
-function createPetMesh() {
-    if (!activePet) return;
-    
-    // Verifica se a cena está disponível
-    if (typeof scene === 'undefined' || !scene) {
-        console.warn('Scene not available yet for pet');
-        return;
-    }
-    
-    // Remover pet anterior se existir
-    if (petMesh) {
-        scene.remove(petMesh);
-        petMesh = null;
-    }
-    
-    // Criar grupo para o pet
-    petMesh = new THREE.Group();
-    
-    // Cor baseada no tipo do pet
-    let petColor = 0x4ecdc4; // default cyan
-    if (activePet.type === 'combat') petColor = 0xff6b6b;
-    else if (activePet.type === 'tank') petColor = 0x4a90d9;
-    else if (activePet.type === 'support') petColor = 0xf9ca24;
-    
-    // Corpo do pet (esfera simples)
-    const bodyGeo = new THREE.SphereGeometry(0.4, 16, 16);
-    const bodyMat = new THREE.MeshStandardMaterial({ 
-        color: petColor,
-        emissive: petColor,
-        emissiveIntensity: 0.3
-    });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 0.4;
-    petMesh.add(body);
-    
-    // Olhos
-    const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
-    const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff });
-    const eye1 = new THREE.Mesh(eyeGeo, eyeMat);
-    eye1.position.set(-0.15, 0.5, 0.3);
-    petMesh.add(eye1);
-    
-    const eye2 = new THREE.Mesh(eyeGeo, eyeMat);
-    eye2.position.set(0.15, 0.5, 0.3);
-    petMesh.add(eye2);
-    
-    // Adicionar à cena
-    scene.add(petMesh);
-    
-    // Posicionar inicialmente
-    updatePetPosition();
-    
-    log(`<span style="color:#4ecdc4">✨ ${activePet.name} materializado!</span>`);
-    
-    // Forçar renderização imediata
-    if (typeof renderer !== 'undefined' && renderer) {
-        renderer.render(scene, camera);
-    }
-}
-
-// Remover mesh 3D do pet
-function removePetMesh() {
-    if (petMesh) {
-        scene.remove(petMesh);
-        petMesh = null;
-    }
-}
-
-// Atualizar posição do pet (seguir jogador + atacar inimigos)
-let petAttackCooldown = 0;
-
-function updatePetPosition() {
-    if (!petMesh || !activePet) return;
-    
-    // Verificar se há inimigos próximos para atacar (apenas inimigos VIVOS)
-    let targetEnemy = null;
-    let minDist = 8; // Raio de aggro do pet
-    
-    for(let monster of monsters) {
-        if(!monster.position || !monster.parent || monster.userData.hp <= 0) continue;
-        const dist = hero.position.distanceTo(monster.position);
-        if(dist < minDist) {
-            minDist = dist;
-            targetEnemy = monster;
-        }
-    }
-    
-    if(targetEnemy && petAttackCooldown <= 0) {
-        // Pet ataca o inimigo
-        petAttack(targetEnemy);
-        petAttackCooldown = 60; // 1 segundo a 60fps
-    }
-    
-    if(petAttackCooldown > 0) petAttackCooldown--;
-    
-    // Se não estiver atacando, segue o jogador
-    if(!targetEnemy || minDist > 5) {
-        // Pet segue o jogador com offset
-        const offset = new THREE.Vector3(1.5, 0, 1.5);
-        offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), hero.rotation.y);
-        
-        petMesh.position.x = hero.position.x + offset.x;
-        petMesh.position.z = hero.position.z + offset.z;
-        petMesh.position.y = 0;
-        
-        // Pet olha para o jogador
-        petMesh.lookAt(hero.position);
-    } else {
-        // Pet olha para o inimigo enquanto ataca
-        petMesh.lookAt(targetEnemy.position);
-    }
-    
-    // Animação de flutuar
-    if(petMesh.children[0]) {
-        petMesh.children[0].position.y = 0.4 + Math.sin(Date.now() * 0.005) * 0.1;
-    }
-}
-
-function petAttack(target) {
-    if(!target || !target.position || !target.userData || !target.parent || target.userData.hp <= 0) return;
-    
-    // Efeito visual do ataque
-    const attackGeom = new THREE.SphereGeometry(0.3, 8, 8);
-    const attackMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
-    const attackBall = new THREE.Mesh(attackGeom, attackMat);
-    attackBall.position.copy(petMesh.position);
-    scene.add(attackBall);
-    
-    // Animar projétil indo até o inimigo
-    const direction = new THREE.Vector3().subVectors(target.position, petMesh.position).normalize();
-    let progress = 0;
-    
-    function animateProjectile() {
-        progress += 0.15;
-        attackBall.position.add(direction.clone().multiplyScalar(0.8));
-        
-        if(progress >= 1 || !target.parent || target.userData.hp <= 0) {
-            scene.remove(attackBall);
-            if(target.parent && target.userData.hp !== undefined && target.userData.hp > 0) {
-                // Causar dano no inimigo (20% do ATK do player + bonus do pet)
-                const petDamage = Math.floor(player.atk * 0.2 + (activePet.bonus.atk || 0));
-                target.userData.hp -= petDamage;
-                floatingText(`🐾 -${petDamage}`, target.position, "#00ffff");
-                
-                // Verificar se morreu
-                if(target.userData.hp <= 0) {
-                    killMonster(target);
-                }
-            }
-        } else {
-            requestAnimationFrame(animateProjectile);
-        }
-    }
-    animateProjectile();
-}
-
-function showPetsWindow() {
-    // Se já estiver aberta, não faz nada (evita bug de abrir múltiplas janelas)
-    const existing = document.getElementById('petsWindow');
-    if (existing) {
-        return; // Já está aberta, não faz nada
-    }
-    
-    gamePaused = true;
-    let petsHTML = `
-        <div id="petsWindow" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;max-height:80vh;overflow-y:auto;background:linear-gradient(135deg, rgba(5,15,35,.98), rgba(15,25,45,.98));border-radius:20px;border:3px solid #5ab9ff;z-index:5000;padding:25px;box-shadow:0 0 50px rgba(90,185,255,0.3);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                <h2 style="color:#5ab9ff;margin:0;font-size:28px;">🐾 Meus Pets</h2>
-                <button onclick="closePetsWindow()" style="background:transparent;border:none;color:#aaa;font-size:28px;cursor:pointer;">&times;</button>
-            </div>
-            
-            ${activePet ? `
-                <div style="background:rgba(78,205,196,0.1);border:2px solid #4ecdc4;border-radius:12px;padding:15px;margin-bottom:20px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div>
-                            <span style="font-size:32px;">${activePet.icon}</span>
-                            <span style="color:white;font-size:18px;margin-left:10px;">${activePet.name} Lv.${activePet.level}</span>
-                        </div>
-                        <button onclick="unequipPet()" style="padding:8px 16px;border-radius:8px;border:1px solid #ff6b6b;background:rgba(255,107,107,0.2);color:white;cursor:pointer;">Guardar</button>
-                    </div>
-                    <div style="margin-top:10px;">
-                        <div style="height:8px;background:#333;border-radius:4px;overflow:hidden;">
-                            <div style="height:100%;width:${(activePet.xp/activePet.nextXp)*100}%;background:linear-gradient(90deg,#4ecdc4,#5ab9ff);"></div>
-                        </div>
-                        <div style="color:#888;font-size:12px;margin-top:4px;">XP: ${activePet.xp}/${activePet.nextXp}</div>
-                    </div>
-                </div>
-            ` : ''}
-            
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
-                ${petsCollection.map(pet => `
-                    <div style="background:rgba(0,0,0,0.3);border:2px solid ${activePet?.id === pet.id ? '#4ecdc4' : '#444'};border-radius:12px;padding:12px;text-align:center;opacity:${activePet?.id === pet.id ? 1 : 0.8};">
-                        <div style="font-size:36px;">${pet.icon}</div>
-                        <div style="color:white;font-weight:bold;margin:5px 0;">${pet.name}</div>
-                        <div style="color:#888;font-size:12px;">Lv.${pet.level} ${pet.type}</div>
-                        ${activePet?.id !== pet.id ? `<button onclick="equipPet('${pet.id}')" style="margin-top:8px;padding:6px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,#4ecdc4,#5ab9ff);color:white;font-size:12px;cursor:pointer;width:100%;">Equipar</button>` : ''}
-                    </div>
-                `).join('')}
-                ${petsCollection.length === 0 ? '<span style="color:#666;grid-column:1/-1;text-align:center;padding:20px;">Você ainda não tem pets. Derrote bosses e explore dungeons para encontrar!</span>' : ''}
-            </div>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', petsHTML);
-}
-
-function closePetsWindow() {
-    const win = document.getElementById('petsWindow');
-    if (win) {
-        win.remove();
-        gamePaused = false;
-    }
-}
-
-function tryDropPet(monsterType, isBoss, isInDungeonFlag) {
-    const availablePets = petTypes.filter(p => {
-        if (isBoss && p.source === 'boss') return true;
-        if (isInDungeonFlag && p.source === 'dungeon') return true;
-        if (p.source === 'drop') return true;
-        return false;
-    });
-    
-    for (let pet of availablePets) {
-        if (Math.random() < pet.dropRate) {
-            if (player.level >= pet.unlockLevel) {
-                addPetToCollection(pet.id);
-                return;
-            }
-        }
-    }
-}
-
-// Feature 4: Object Pooling
-function initObjectPools() {
-    for (let key in POOL_CONFIG) {
-        const config = POOL_CONFIG[key];
-        objectPools[key] = [];
-        for (let i = 0; i < config.initial; i++) {
-            objectPools[key].push(createPoolObject(key));
-        }
-    }
-}
-
-function createPoolObject(type) {
-    switch(type) {
-        case 'monsters': return { mesh: null, data: null, active: false };
-        case 'fireballs': return { mesh: null, velocity: null, active: false };
-        case 'floatTexts': return { element: null, active: false };
-        case 'droppedItems': return { mesh: null, item: null, active: false };
-        case 'particles': return { mesh: null, velocity: null, life: 0, active: false };
-        default: return null;
-    }
-}
-
-function getFromPool(type) {
-    const pool = objectPools[type];
-    const obj = pool.find(o => !o.active);
-    if (obj) {
-        obj.active = true;
-        return obj;
-    }
-    
-    // Pool esgotado, criar novo se abaixo do max
-    if (pool.length < POOL_CONFIG[type].max) {
-        const newObj = createPoolObject(type);
-        newObj.active = true;
-        pool.push(newObj);
-        return newObj;
-    }
-    
-    return null;
-}
-
-function returnToPool(type, obj) {
-    obj.active = false;
-}
-
-// Feature 5: Eventos Diários e Sazonais
-function checkDailyLogin() {
-    const today = new Date().toDateString();
-    const lastLogin = evolutionData.stats.lastLoginDate;
-    
-    if (lastLogin !== today) {
-        // Novo dia
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        
-        if (lastLogin === yesterday.toDateString()) {
-            // Login consecutivo
-            dailyRewards.streak = Math.min(7, dailyRewards.streak + 1);
-        } else {
-            // Quebrou streak
-            dailyRewards.streak = 1;
-        }
-        
-        evolutionData.stats.lastLoginDate = today;
-        showDailyReward();
-    }
-}
-
-function showDailyReward() {
-    const reward = dailyRewards.rewards[dailyRewards.streak - 1];
-    if (!reward) return;
-    
-    gamePaused = true;
-    let html = `
-        <div id="dailyRewardModal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg, rgba(5,15,35,.98), rgba(15,25,45,.98));border-radius:20px;border:3px solid #ffd66b;z-index:6000;padding:30px;text-align:center;box-shadow:0 0 50px rgba(255,214,107,0.4);">
-            <div style="font-size:64px;margin-bottom:15px;">🎁</div>
-            <h2 style="color:#ffd66b;margin:0 0 10px 0;">Recompensa Diária!</h2>
-            <p style="color:#aaa;margin:0 0 20px 0;">Dia ${dailyRewards.streak} de login consecutivo</p>
-            <div style="display:flex;justify-content:center;gap:20px;margin-bottom:25px;">
-                ${reward.gold ? `<div style="background:rgba(255,214,107,0.1);border:2px solid #ffd66b;border-radius:12px;padding:15px;min-width:100px;"><div style="font-size:32px;">💰</div><div style="color:#ffd66b;font-weight:bold;">+${reward.gold} Gold</div></div>` : ''}
-                ${reward.xp ? `<div style="background:rgba(68,255,136,0.1);border:2px solid #44ff88;border-radius:12px;padding:15px;min-width:100px;"><div style="font-size:32px;">⭐</div><div style="color:#44ff88;font-weight:bold;">+${reward.xp} XP</div></div>` : ''}
-                ${reward.item ? `<div style="background:rgba(90,185,255,0.1);border:2px solid #5ab9ff;border-radius:12px;padding:15px;min-width:100px;"><div style="font-size:32px;">📦</div><div style="color:#5ab9ff;font-weight:bold;">${reward.item}</div></div>` : ''}
-            </div>
-            <button onclick="claimDailyReward()" style="padding:15px 40px;font-size:18px;font-weight:bold;border-radius:12px;border:none;background:linear-gradient(135deg,#ffd66b,#ffaa00);color:#000;cursor:pointer;">Reivindicar</button>
-        </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', html);
-}
-
-function claimDailyReward() {
-    const reward = dailyRewards.rewards[dailyRewards.streak - 1];
-    if (!reward) return;
-    
-    if (reward.gold) player.gold += reward.gold;
-    if (reward.xp) { player.xp += reward.xp; checkLevel(); }
-    if (reward.item) {
-        // Criar item de recompensa
-        const baseItem = { name: reward.item, type: 'consumable', rarity: 'common' };
-        addItemToInventory(createItem(baseItem));
-    }
-    
-    player.gold = player.gold; // trigger save
-    updatePanels();
-    
-    const modal = document.getElementById('dailyRewardModal');
-    if (modal) modal.remove();
-    gamePaused = false;
-    
-    log(`<span style="color:#ffd66b">🎁 Recompensa diária reivindicada!</span>`);
-}
-
-function updateDailyEvents() {
-    const now = Date.now();
-    const dayOfWeek = new Date().getDay();
-    
-    dailyEvents.forEach(event => {
-        // Ativar eventos baseado no schedule
-        let shouldActivate = false;
-        switch(event.schedule) {
-            case 'weekend': shouldActivate = (dayOfWeek === 0 || dayOfWeek === 6); break;
-            case 'wednesday': shouldActivate = (dayOfWeek === 3); break;
-            case 'friday': shouldActivate = (dayOfWeek === 5); break;
-            case 'sunday': shouldActivate = (dayOfWeek === 0); break;
-            case 'monthly': shouldActivate = (new Date().getDate() === 1); break;
-        }
-        
-        if (shouldActivate && !event.active) {
-            event.active = true;
-            event.endTime = now + 24 * 60 * 60 * 1000; // 24 horas
-            log(`<span style="color:cyan">📢 Evento iniciado: ${event.name}!</span>`);
-        }
-        
-        if (event.active && now > event.endTime) {
-            event.active = false;
-        }
-    });
-}
-
-function getEventMultiplier(type) {
-    let multiplier = 1.0;
-    dailyEvents.forEach(event => {
-        if (!event.active) return;
-        if (event.id === 'double_xp' && type === 'xp') multiplier *= 2;
-        if (event.id === 'double_gold' && type === 'gold') multiplier *= 2;
-        if (event.id === 'rare_drops' && type === 'drop') multiplier *= 1.5;
-    });
-    if (seasonalEvent.active) multiplier *= seasonalEvent.bonusMultiplier;
-    return multiplier;
-}
-
-// Integrar com sistema existente
-const originalKillMonster = typeof killMonster !== 'undefined' ? killMonster : null;
 
 // Tipos de monstros por bioma
 const monsterTypes = {
@@ -1740,20 +785,6 @@ const ctxFullMap = fullMapCanvas.getContext('2d');
 let isFullMapOpen = false;
 
 const lootTable=[
-    // Materiais de Crafting (type: 'material')
-    { name:"Iron Ore", type:"material", desc:"Minério de ferro bruto.", icon:"🪨", stackable:true, value:5 },
-    { name:"Wood", type:"material", desc:"Madeira resistente.", icon:"🪵", stackable:true, value:3 },
-    { name:"Leather", type:"material", desc:"Couro curtido.", icon:"🧵", stackable:true, value:8 },
-    { name:"Crystal Shard", type:"material", desc:"Fragmento de cristal mágico.", icon:"💎", stackable:true, value:15 },
-    { name:"Herb", type:"material", desc:"Erva medicinal.", icon:"🌿", stackable:true, value:4 },
-    { name:"Earth Essence", type:"material", desc:"Essência da terra.", icon:"🟤", stackable:true, value:20 },
-    { name:"Wind Essence", type:"material", desc:"Essência do vento.", icon:"💨", stackable:true, value:20 },
-    { name:"Fire Essence", type:"material", desc:"Essência do fogo.", icon:"🔥", stackable:true, value:20 },
-    { name:"Water Essence", type:"material", desc:"Essência da água.", icon:"💧", stackable:true, value:20 },
-    { name:"Feather", type:"material", desc:"Pena leve.", icon:"🪶", stackable:true, value:6 },
-    { name:"Steel Bar", type:"material", desc:"Barra de aço forjada.", icon:"⬜", stackable:true, value:25 },
-    { name:"Dragon Scale", type:"material", desc:"Escama de dragão rara.", icon:"🐉", stackable:true, value:50 },
-    
     // Armas (weapon) - com diferentes níveis de dado
     { name:"Rusty Dagger", slot:"weapon", atk:3, desc:"Adaga enferrujada.", icon:"🗡️", stackable:true, value:10 },
     { name:"Iron Sword", slot:"weapon", atk:7, desc:"Lâmina de aço temperado.", icon:"🗡️", stackable:true, value:25 },
@@ -2421,33 +1452,6 @@ function spawnBossWithScaling() {
     log("<span style='color:red; font-weight:bold;'>👹 UM BOSS APARECEU! Poder: x" + bossMultiplier.toFixed(2) + "</span>");
 }
 
-// Função para criar mesh de item no chão (usada em killMonster)
-function createItemDropMesh(item, position) {
-    let color = 0xffffff;
-    if(item.rarity === 'comum') color = 0xcccccc;
-    else if(item.rarity === 'raro') color = 0x0000ff;
-    else if(item.rarity === 'epico') color = 0xa020f0;
-    else if(item.rarity === 'lendario') color = 0xffd700;
-    
-    const geometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
-    const material = new THREE.MeshStandardMaterial({ 
-        color: color, 
-        emissive: color, 
-        emissiveIntensity: 0.3 
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-    
-    if(position.x !== undefined) {
-        mesh.position.copy(position);
-    } else {
-        mesh.position.set(position.position.x, position.position.y, position.position.z);
-    }
-    mesh.position.y = 0.3;
-    
-    mesh.userData = { isItem: true, itemData: item };
-    return mesh;
-}
-
 function killMonster(m){
     // Recompensa por matar Boss: 2x XP base, garantido mínimo de 40% do XP do nível atual
     let xpGain = m.userData.xp;
@@ -2459,15 +1463,6 @@ function killMonster(m){
     }
     
     player.xp += xpGain;
-    
-    // Aplicar multiplicador de eventos (XP em dobro)
-    const xpMultiplier = getEventMultiplier('xp');
-    if (xpMultiplier > 1) {
-        const bonusXP = Math.floor(xpGain * (xpMultiplier - 1));
-        player.xp += bonusXP;
-        floatingText("+"+bonusXP+" XP (Evento!)", m.position, "#ffd66b");
-    }
-    
     evolutionData.totalXP += xpGain; // Adiciona XP total para evolução
     floatingText("+"+xpGain+" XP", m.position, "lime");
     
@@ -2527,38 +1522,15 @@ function killMonster(m){
     // Drop de gold (sempre dropa um pouco de gold)
     let goldDrop = Math.floor(m.userData.level * 2 + Math.random() * 5);
     if(m.userData.isBoss) goldDrop *= 3; // Boss dropa 3x mais gold
-    
-    // Aplicar multiplicador de eventos
-    const goldMultiplier = getEventMultiplier('gold');
-    goldDrop = Math.floor(goldDrop * goldMultiplier);
-    
     player.gold += goldDrop;
     floatingText("+"+goldDrop+" Gold", m.position, "gold");
     checkAchievements(); // Verifica conquistas após kill + gold
     
-    // Drop de itens - SISTEMA ANTIGO RESTAURADO (sem meshes no chão)
+    // Drop de itens no chão (randomico)
     let dropCount = m.userData.isBoss ? 5 : Math.floor(Math.random() * 3); // Boss dropa mais itens
-    
-    // Chance extra de dropar materiais de crafting (40% por monstro)
-    if (Math.random() < 0.4) {
-        const materials = lootTable.filter(item => item.type === 'material');
-        if (materials.length > 0) {
-            let randomMaterial = materials[Math.floor(Math.random() * materials.length)];
-            let matCopy = createItem(randomMaterial);
-            matCopy.quantity = Math.floor(Math.random() * 3) + 1; // 1-3 materiais
-            
-            // Adiciona direto ao inventário (sistema antigo)
-            addItemToInventory(matCopy.type, matCopy.rarity, matCopy.quantity);
-            floatingText("+"+matCopy.quantity+" "+matCopy.name, m.position, getRarityColor(matCopy.rarity));
-        }
-    }
-    
     for(let i = 0; i < dropCount; i++) {
         if(Math.random() > 0.4) { // 60% chance de dropar cada item
             let randomItem = lootTable[Math.floor(Math.random() * lootTable.length)];
-            // Pular materiais aqui pois ja foram tratados acima
-            if (randomItem.type === 'material') continue;
-            
             let itemCopy = createItem(randomItem);
             // Aplicar raridade baseada no bioma (boss sempre tem melhor chance)
             if(m.userData.isBoss) {
@@ -2573,9 +1545,44 @@ function killMonster(m){
                 itemCopy.quantity = Math.floor(Math.random() * 3) + 1; // 1-3 itens
             }
 
-            // Adiciona direto ao inventário (sistema antigo restaurado)
-            addItemToInventory(itemCopy.type, itemCopy.rarity, itemCopy.quantity);
-            floatingText("+"+itemCopy.quantity+" "+itemCopy.name, m.position, getRarityColor(itemCopy.rarity));
+            // Criar item visual no chão com cor de raridade
+            let itemMesh = new THREE.Group();
+            let rarHex = itemCopy.rarityData ? itemCopy.rarityData.glowHex : 0xffd700;
+            let rarGlowHex = itemCopy.rarityData ? itemCopy.rarityData.hex : 0xffaa00;
+
+            // Base do item (brilho da raridade)
+            let glowMat = new THREE.MeshStandardMaterial({color: rarHex, emissive: rarGlowHex, emissiveIntensity: 1.2});
+            let glow = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.4, 16), glowMat);
+            glow.rotation.x = -Math.PI / 2;
+            glow.position.y = 0.05;
+            itemMesh.add(glow);
+
+            // Cubo colorido por slot + raridade
+            let itemColor = 0xffffff;
+            if(itemCopy.slot === "weapon") itemColor = 0xff4444;
+            else if(itemCopy.slot === "shield") itemColor = 0x4444ff;
+            else if(itemCopy.slot === "cape") itemColor = 0x44ff44;
+            else if(itemCopy.slot === "boots") itemColor = 0xffaa00;
+            else if(itemCopy.slot === "ring") itemColor = 0xffd700;
+            else if(itemCopy.slot === "consumable") itemColor = 0x00ff88;
+            if(itemCopy.rarity && itemCopy.rarity !== 'common') itemColor = rarHex;
+
+            let itemGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+            let itemMat = new THREE.MeshStandardMaterial({color: itemColor, emissive: itemColor, emissiveIntensity: 0.7});
+            let itemCube = new THREE.Mesh(itemGeo, itemMat);
+            itemCube.position.y = 0.3;
+            itemMesh.add(itemCube);
+            
+            itemMesh.position.copy(m.position);
+            itemMesh.position.x += (Math.random() - 0.5) * 2;
+            itemMesh.position.z += (Math.random() - 0.5) * 2;
+            
+            scene.add(itemMesh);
+            droppedItems.push({
+                mesh: itemMesh,
+                item: itemCopy,
+                life: 600 // 10 segundos a 60fps
+            });
         }
     }
     
@@ -2583,28 +1590,8 @@ function killMonster(m){
     createDeathParticles(m.position, m.userData.isBoss ? 0x8b0000 : 0x6a3399, m.userData.isBoss ? 30 : 15);
     if(m.userData.isBoss) { playSound('bossKill'); screenShake(0.7); } else { playSound('hit'); }
 
-    // Tentar drop de pet (boss e dungeon têm maior chance)
-    tryDropPet(m.userData.name, m.userData.isBoss, isInDungeon);
-    
-    // Ganhar XP para o pet ativo
-    gainPetXp(xpGain * 0.1); // Pet ganha 10% do XP do jogador
-
-    // Remover monstro com segurança (evita double-remove)
-    if(m.parent) {
-        scene.remove(m);
-    }
-    if(m.userData.ui && m.userData.ui.bar) {
-        m.userData.ui.bar.remove();
-    }
-    if(m.userData.label) {
-        m.userData.label.remove();
-    }
-    
-    const monsterIndex = monsters.indexOf(m);
-    if(monsterIndex > -1) {
-        monsters.splice(monsterIndex, 1);
-    }
-    
+    scene.remove(m); m.userData.ui.bar.remove(); m.userData.label.remove();
+    monsters.splice(monsters.indexOf(m),1);
     checkLevel();
 }
 
@@ -2743,7 +1730,7 @@ function castAOE(){
     // Monstros comuns recebem pelo menos 50% do HP máximo
     [...monsters].forEach(monster => {
         let dist = monster.position.distanceTo(hero.position);
-        if(dist <= 4 && monster.parent && monster.userData.hp > 0){
+        if(dist <= 4){
             let baseDmg = player.atk * 2.5;
             if(player.aoeDamageBonus) baseDmg *= (1 + player.aoeDamageBonus / 100);
             let calcDmg = Math.max(1, baseDmg - monster.userData.def);
@@ -2834,8 +1821,8 @@ function attack(){
         
         // Detecta hit no meio da animação (quando t ~ PI/2)
         if (t >= Math.PI / 2 && t < Math.PI / 2 + animSpeed) {
-            [...monsters].forEach(m => {
-                if(hero.position.distanceTo(m.position) < 4.5 && m.parent && m.userData.hp > 0){
+            monsters.forEach(m => {
+                if(hero.position.distanceTo(m.position) < 4.5){
                     let dmg = player.atk + Math.floor(Math.random()*5);
                     
                     // Verifica crítico
@@ -3065,34 +2052,6 @@ function recalcStats(){
 
 function updatePanels(){
     statsPanel.innerHTML=`<div style="font-size:18px; margin-bottom:10px;">🎯 Nível ${player.level}</div><div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;"><div style="background:rgba(255,100,100,0.3); padding:8px; border-radius:6px;">⚔️ ATK: ${player.atk}</div><div style="background:rgba(100,150,255,0.3); padding:8px; border-radius:6px;">🛡️ DEF: ${player.def}</div><div style="background:rgba(100,255,150,0.3); padding:8px; border-radius:6px;">❤️ HP: ${player.hp}/${player.maxHp}</div><div style="background:rgba(100,150,255,0.3); padding:8px; border-radius:6px;">💙 SP: ${Math.floor(player.sp)}/${player.maxSp}</div></div><div style="margin-top:10px; color:gold;">💰 Gold: ${player.gold}</div>`;
-    
-    // Atualizar display do pet equipado
-    const petDisplay = document.getElementById('petEquippedDisplay');
-    const petStatsDiv = document.getElementById('petStatsDisplay');
-    if (activePet && petDisplay && petStatsDiv) {
-        petDisplay.style.display = 'block';
-        petStatsDiv.innerHTML = `
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                <span style="font-size:28px;">${activePet.icon}</span>
-                <div>
-                    <div style="color:white; font-weight:bold;">${activePet.name} <span style="color:#4ecdc4; font-size:14px;">Lv.${activePet.level}</span></div>
-                    <div style="color:#888; font-size:12px;">${activePet.type} • XP: ${activePet.xp}/${activePet.nextXp}</div>
-                </div>
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; font-size:12px;">
-                ${activePet.bonus.atk ? `<div style="color:#ff9966;">+${activePet.bonus.atk} ATK</div>` : ''}
-                ${activePet.bonus.def ? `<div style="color:#66aaff;">+${activePet.bonus.def} DEF</div>` : ''}
-                ${activePet.bonus.hp ? `<div style="color:#ff6666;">+${activePet.bonus.hp} HP</div>` : ''}
-                ${activePet.bonus.spRegen ? `<div style="color:#6699ff;">+${activePet.bonus.spRegen} SP/s</div>` : ''}
-                ${activePet.bonus.xpBonus ? `<div style="color:#ffd66b;">+${activePet.bonus.xpBonus}% XP</div>` : ''}
-                ${activePet.bonus.critChance ? `<div style="color:#ff66ff;">+${activePet.bonus.critChance}% CRIT</div>` : ''}
-            </div>
-            <button onclick="unequipPet()" style="margin-top:8px; padding:6px 12px; border-radius:6px; border:none; background:rgba(255,107,107,0.3); color:#ff6b6b; cursor:pointer; font-size:11px; width:100%;">Guardar Pet</button>
-        `;
-    } else if (petDisplay) {
-        petDisplay.style.display = 'none';
-    }
-    
     equippedPanel.innerHTML="";
     const validEquipSlots = ['weapon','shield','cape','boots','ring1','ring2'];
     for(let k of validEquipSlots) {
@@ -3412,7 +2371,7 @@ function toggleV(){
         gamePaused = false;
     } else {
         win.style.display = 'block';
-        updatePanels(); // Atualiza painel com stats e pet equipado
+        updatePanels();
         gamePaused = true;
     }
 }
@@ -3501,7 +2460,7 @@ function drawFullMap() {
     });
     
     // Mostrar monstros no mapa — outline escuro para visibilidade em qualquer bioma
-    [...monsters].forEach(m => {
+    monsters.forEach(m => {
         const dist = m.position.distanceTo(hero.position);
         if (dist <= 1000) {
             const mx = centerX + (m.position.x - hero.position.x) * mapScale;
@@ -3710,15 +2669,6 @@ function animate(time){
         renderer.render(scene, camera);
         return;
     }
-    
-    // Atualizar fila de crafting
-    updateCraftingQueueDisplay();
-    
-    // Verificar eventos diários
-    updateDailyEvents();
-    
-    // Atualizar posição do pet
-    updatePetPosition();
 
     let move = new THREE.Vector3(0,0,0);
     // Teclado - WASD e Setas Direcionais
@@ -3827,8 +2777,8 @@ function animate(time){
     // Fireball
     for(let i=fireballs.length-1; i>=0; i--){
         let f = fireballs[i]; f.mesh.position.add(f.dir.clone().multiplyScalar(0.8)); f.life--;
-        [...monsters].forEach(m=>{
-            if(f.mesh.position.distanceTo(m.position)<3.5 && m.parent && m.userData.hp > 0){
+        monsters.forEach(m=>{
+            if(f.mesh.position.distanceTo(m.position)<3.5){
                 let baseDmg = 40;
                 // Aplica bônus de dano da skill tree
                 if(player.fireballDamageBonus) {
@@ -3896,7 +2846,7 @@ function animate(time){
     }
 
     // Monstros - animação de respiração e atualização
-    [...monsters].forEach((m)=>{
+    monsters.forEach((m)=>{
         let d = hero.position.distanceTo(m.position);
         if (d <= 1000) {
             m.visible = true;
@@ -4125,7 +3075,7 @@ function animate(time){
         }
     });
     
-    [...monsters].forEach(m => {
+    monsters.forEach(m => {
         const dist = m.position.distanceTo(hero.position);
         if (dist <= 1000) {
             const mx = centerX + (m.position.x - hero.position.x) * mapScale;
@@ -4176,23 +3126,6 @@ window.onkeydown=e=>{
     if(e.key.toLowerCase()==="p") togglePause(); // Tecla P para pausar
     if(e.key.toLowerCase()==="q") usePotion(); // Q = Usar poção
     if(e.key.toLowerCase()==="m") toggleFullMap(); // Tecla M para abrir mapa expandido
-    if(e.key.toLowerCase()==="c" && !e.repeat) { // C = Crafting toggle
-        const craftingWin = document.getElementById('craftingWindow');
-        if (craftingWin) {
-            closeCraftingWindow();
-        } else {
-            openCraftingWindow();
-        }
-    }
-    if(e.key.toLowerCase()==="t" && !e.repeat) enterDungeon(); // T = Enter Dungeon
-    if(e.key.toLowerCase()==="n" && !e.repeat) { // N = Pets toggle
-        const petsWin = document.getElementById('petsWindow');
-        if (petsWin) {
-            closePetsWindow();
-        } else {
-            showPetsWindow();
-        }
-    }
 };
 window.onkeyup=e=>keys[e.key.toLowerCase()]=false;
 
@@ -4332,7 +3265,7 @@ function revivePlayer() {
 
 function resetGame() {
     // 1. Limpar cena ANTES de zerar os arrays (era o bug principal)
-    [...monsters].forEach(m => {
+    monsters.forEach(m => {
         scene.remove(m);
         if(m.userData.ui && m.userData.ui.bar) m.userData.ui.bar.remove();
         if(m.userData.label) m.userData.label.remove();
@@ -4563,16 +3496,9 @@ function launchGame(loadSave) {
     heroLabel.querySelector(".playerName").innerHTML = playerName + " Lv.1";
     startOverlay.style.display = 'none';
     if(loadSave) loadGame(); // Só carrega se foi pedido (herói existente)
-    
-    // Inicializar sistemas das novas features
-    initObjectPools();
-    checkDailyLogin();
-    updateDailyEvents();
-    
     animate();
     log("Eldoria Mobile Restaurado!");
     log("<span style='color:gold'>🎮 Bem-vindo, " + playerName + "! Derrote inimigos, colete itens e explore os biomas!</span>");
-    log("<span style='color:cyan'>🔨 Pressione C para Crafting | T para Dungeons | N para Pets</span>");
 }
 
 renderStartScreen();
