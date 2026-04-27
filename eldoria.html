@@ -772,6 +772,7 @@ const petTypes = [
 let activePet = null;
 let petsCollection = [];
 let petXpSystem = { level: 1, xp: 0, next: 100 };
+let petMesh = null; // Mesh 3D do pet ativo
 
 // Feature 4: Object Pooling para Performance
 const objectPools = {
@@ -1118,12 +1119,28 @@ function getRandomDungeonEnemy() {
 
 function enterDungeon() {
     if (isInDungeon) {
-        log('<span style="color:orange">Você já está em uma masmorra!</span>');
-        return;
+        // Verifica se ainda está dentro da dungeon
+        if (checkInDungeon()) {
+            log('<span style="color:orange">Você já está em uma masmorra!</span>');
+            return;
+        }
+        // Se saiu da dungeon, permite entrar novamente
+        isInDungeon = false;
+        dungeonRooms = [];
     }
+    
+    // Gerar nova dungeon
     generateDungeon(1);
-    // Teleportar para entrada da dungeon
-    hero.position.set(dungeonRooms[0].x, 0, dungeonRooms[0].z);
+    
+    // Aguardar a geração da dungeon antes de teleportar
+    setTimeout(() => {
+        if (dungeonRooms.length > 0) {
+            // Teleportar para entrada da dungeon
+            hero.position.set(dungeonRooms[0].x, 0, dungeonRooms[0].z);
+            // Forçar flag para true após gerar
+            isInDungeon = true;
+        }
+    }, 100);
 }
 
 function exitDungeon() {
@@ -1167,8 +1184,12 @@ function equipPet(petId) {
     const pet = petsCollection.find(p => p.id === petId);
     if (!pet) return;
     
+    // Fechar janela de pets se estiver aberta
+    closePetsWindow();
+    
     activePet = pet;
     applyPetBonuses();
+    createPetMesh(); // Criar mesh 3D do pet
     log(`<span style="color:#4ecdc4">🐾 ${pet.name} agora está ativo!</span>`);
     recalcStats();
 }
@@ -1178,6 +1199,7 @@ function unequipPet() {
     removePetBonuses();
     log(`<span style="color:#888">${activePet.name} foi guardado.</span>`);
     activePet = null;
+    removePetMesh(); // Remover mesh 3D do pet
     recalcStats();
 }
 
@@ -1201,6 +1223,28 @@ function removePetBonuses() {
     }
 }
 
+// Função para verificar se o jogador está em dungeon
+function checkInDungeon() {
+    // Verifica se o jogador está dentro de alguma sala da dungeon
+    if (!isInDungeon || dungeonRooms.length === 0) return false;
+    
+    for (let room of dungeonRooms) {
+        const halfWidth = room.width / 2;
+        const halfDepth = room.depth / 2;
+        
+        if (hero.position.x >= room.x - halfWidth && 
+            hero.position.x <= room.x + halfWidth &&
+            hero.position.z >= room.z - halfDepth && 
+            hero.position.z <= room.z + halfDepth) {
+            return true;
+        }
+    }
+    
+    // Se saiu da dungeon, retorna ao mundo normal
+    exitDungeon();
+    return false;
+}
+
 function gainPetXp(amount) {
     if (!activePet) return;
     
@@ -1217,7 +1261,102 @@ function gainPetXp(amount) {
     }
 }
 
+// Criar mesh 3D do pet
+function createPetMesh() {
+    if (!activePet) return;
+    
+    // Verifica se a cena está disponível
+    if (typeof scene === 'undefined' || !scene) {
+        console.warn('Scene not available yet for pet');
+        return;
+    }
+    
+    // Remover pet anterior se existir
+    if (petMesh) {
+        scene.remove(petMesh);
+        petMesh = null;
+    }
+    
+    // Criar grupo para o pet
+    petMesh = new THREE.Group();
+    
+    // Cor baseada no tipo do pet
+    let petColor = 0x4ecdc4; // default cyan
+    if (activePet.type === 'combat') petColor = 0xff6b6b;
+    else if (activePet.type === 'tank') petColor = 0x4a90d9;
+    else if (activePet.type === 'support') petColor = 0xf9ca24;
+    
+    // Corpo do pet (esfera simples)
+    const bodyGeo = new THREE.SphereGeometry(0.4, 16, 16);
+    const bodyMat = new THREE.MeshStandardMaterial({ 
+        color: petColor,
+        emissive: petColor,
+        emissiveIntensity: 0.3
+    });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 0.4;
+    petMesh.add(body);
+    
+    // Olhos
+    const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff });
+    const eye1 = new THREE.Mesh(eyeGeo, eyeMat);
+    eye1.position.set(-0.15, 0.5, 0.3);
+    petMesh.add(eye1);
+    
+    const eye2 = new THREE.Mesh(eyeGeo, eyeMat);
+    eye2.position.set(0.15, 0.5, 0.3);
+    petMesh.add(eye2);
+    
+    // Adicionar à cena
+    scene.add(petMesh);
+    
+    // Posicionar inicialmente
+    updatePetPosition();
+    
+    log(`<span style="color:#4ecdc4">✨ ${activePet.name} materializado!</span>`);
+    
+    // Forçar renderização imediata
+    if (typeof renderer !== 'undefined' && renderer) {
+        renderer.render(scene, camera);
+    }
+}
+
+// Remover mesh 3D do pet
+function removePetMesh() {
+    if (petMesh) {
+        scene.remove(petMesh);
+        petMesh = null;
+    }
+}
+
+// Atualizar posição do pet (seguir jogador)
+function updatePetPosition() {
+    if (!petMesh || !activePet) return;
+    
+    // Pet segue o jogador com offset
+    const offset = new THREE.Vector3(1.5, 0, 1.5);
+    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), hero.rotation.y);
+    
+    petMesh.position.x = hero.position.x + offset.x;
+    petMesh.position.z = hero.position.z + offset.z;
+    petMesh.position.y = 0;
+    
+    // Pet olha para o jogador
+    petMesh.lookAt(hero.position);
+    
+    // Animação de flutuar
+    petMesh.children[0].position.y = 0.4 + Math.sin(Date.now() * 0.005) * 0.1;
+}
+
 function showPetsWindow() {
+    // Se já estiver aberta, fecha
+    const existing = document.getElementById('petsWindow');
+    if (existing) {
+        closePetsWindow();
+        return;
+    }
+    
     gamePaused = true;
     let petsHTML = `
         <div id="petsWindow" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;max-height:80vh;overflow-y:auto;background:linear-gradient(135deg, rgba(5,15,35,.98), rgba(15,25,45,.98));border-radius:20px;border:3px solid #5ab9ff;z-index:5000;padding:25px;box-shadow:0 0 50px rgba(90,185,255,0.3);">
@@ -1262,8 +1401,10 @@ function showPetsWindow() {
 
 function closePetsWindow() {
     const win = document.getElementById('petsWindow');
-    if (win) win.remove();
-    gamePaused = false;
+    if (win) {
+        win.remove();
+        gamePaused = false;
+    }
 }
 
 function tryDropPet(monsterType, isBoss, isInDungeonFlag) {
@@ -1510,6 +1651,20 @@ const ctxFullMap = fullMapCanvas.getContext('2d');
 let isFullMapOpen = false;
 
 const lootTable=[
+    // Materiais de Crafting (type: 'material')
+    { name:"Iron Ore", type:"material", desc:"Minério de ferro bruto.", icon:"🪨", stackable:true, value:5 },
+    { name:"Wood", type:"material", desc:"Madeira resistente.", icon:"🪵", stackable:true, value:3 },
+    { name:"Leather", type:"material", desc:"Couro curtido.", icon:"🧵", stackable:true, value:8 },
+    { name:"Crystal Shard", type:"material", desc:"Fragmento de cristal mágico.", icon:"💎", stackable:true, value:15 },
+    { name:"Herb", type:"material", desc:"Erva medicinal.", icon:"🌿", stackable:true, value:4 },
+    { name:"Earth Essence", type:"material", desc:"Essência da terra.", icon:"🟤", stackable:true, value:20 },
+    { name:"Wind Essence", type:"material", desc:"Essência do vento.", icon:"💨", stackable:true, value:20 },
+    { name:"Fire Essence", type:"material", desc:"Essência do fogo.", icon:"🔥", stackable:true, value:20 },
+    { name:"Water Essence", type:"material", desc:"Essência da água.", icon:"💧", stackable:true, value:20 },
+    { name:"Feather", type:"material", desc:"Pena leve.", icon:"🪶", stackable:true, value:6 },
+    { name:"Steel Bar", type:"material", desc:"Barra de aço forjada.", icon:"⬜", stackable:true, value:25 },
+    { name:"Dragon Scale", type:"material", desc:"Escama de dragão rara.", icon:"🐉", stackable:true, value:50 },
+    
     // Armas (weapon) - com diferentes níveis de dado
     { name:"Rusty Dagger", slot:"weapon", atk:3, desc:"Adaga enferrujada.", icon:"🗡️", stackable:true, value:10 },
     { name:"Iron Sword", slot:"weapon", atk:7, desc:"Lâmina de aço temperado.", icon:"🗡️", stackable:true, value:25 },
@@ -2267,9 +2422,29 @@ function killMonster(m){
     
     // Drop de itens no chão (randomico)
     let dropCount = m.userData.isBoss ? 5 : Math.floor(Math.random() * 3); // Boss dropa mais itens
+    
+    // Chance extra de dropar materiais de crafting (40% por monstro)
+    if (Math.random() < 0.4) {
+        const materials = lootTable.filter(item => item.type === 'material');
+        if (materials.length > 0) {
+            let randomMaterial = materials[Math.floor(Math.random() * materials.length)];
+            let matCopy = createItem(randomMaterial);
+            matCopy.quantity = Math.floor(Math.random() * 3) + 1; // 1-3 materiais
+            
+            // Criar item visual no chao
+            let matMesh = createItemDropMesh(matCopy, m.position);
+            itemsOnGround.push({ mesh: matMesh, item: matCopy });
+            scene.add(matMesh);
+            floatingText("+"+matCopy.quantity+" "+matCopy.name, m.position, "item");
+        }
+    }
+    
     for(let i = 0; i < dropCount; i++) {
         if(Math.random() > 0.4) { // 60% chance de dropar cada item
             let randomItem = lootTable[Math.floor(Math.random() * lootTable.length)];
+            // Pular materiais aqui pois ja foram tratados acima
+            if (randomItem.type === 'material') continue;
+            
             let itemCopy = createItem(randomItem);
             // Aplicar raridade baseada no bioma (boss sempre tem melhor chance)
             if(m.userData.isBoss) {
@@ -2285,34 +2460,8 @@ function killMonster(m){
             }
 
             // Criar item visual no chão com cor de raridade
-            let itemMesh = new THREE.Group();
-            let rarHex = itemCopy.rarityData ? itemCopy.rarityData.glowHex : 0xffd700;
-            let rarGlowHex = itemCopy.rarityData ? itemCopy.rarityData.hex : 0xffaa00;
-
-            // Base do item (brilho da raridade)
-            let glowMat = new THREE.MeshStandardMaterial({color: rarHex, emissive: rarGlowHex, emissiveIntensity: 1.2});
-            let glow = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.4, 16), glowMat);
-            glow.rotation.x = -Math.PI / 2;
-            glow.position.y = 0.05;
-            itemMesh.add(glow);
-
-            // Cubo colorido por slot + raridade
-            let itemColor = 0xffffff;
-            if(itemCopy.slot === "weapon") itemColor = 0xff4444;
-            else if(itemCopy.slot === "shield") itemColor = 0x4444ff;
-            else if(itemCopy.slot === "cape") itemColor = 0x44ff44;
-            else if(itemCopy.slot === "boots") itemColor = 0xffaa00;
-            else if(itemCopy.slot === "ring") itemColor = 0xffd700;
-            else if(itemCopy.slot === "consumable") itemColor = 0x00ff88;
-            if(itemCopy.rarity && itemCopy.rarity !== 'common') itemColor = rarHex;
-
-            let itemGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
-            let itemMat = new THREE.MeshStandardMaterial({color: itemColor, emissive: itemColor, emissiveIntensity: 0.7});
-            let itemCube = new THREE.Mesh(itemGeo, itemMat);
-            itemCube.position.y = 0.3;
-            itemMesh.add(itemCube);
+            let itemMesh = createItemDropMesh(itemCopy, m.position);
             
-            itemMesh.position.copy(m.position);
             itemMesh.position.x += (Math.random() - 0.5) * 2;
             itemMesh.position.z += (Math.random() - 0.5) * 2;
             
@@ -3420,6 +3569,9 @@ function animate(time){
     
     // Verificar eventos diários
     updateDailyEvents();
+    
+    // Atualizar posição do pet
+    updatePetPosition();
 
     let move = new THREE.Vector3(0,0,0);
     // Teclado - WASD e Setas Direcionais
