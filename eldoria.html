@@ -832,11 +832,10 @@ let seasonalEvent = {
 
 // Feature 1: Sistema de Crafting - Funções
 function openCraftingWindow() {
-    // Se já estiver aberta, fecha e retorna
+    // Se já estiver aberta, não faz nada (evita bug de abrir múltiplas janelas)
     const existing = document.getElementById('craftingWindow');
     if (existing) {
-        closeCraftingWindow();
-        return;
+        return; // Já está aberta, não faz nada
     }
     
     gamePaused = true;
@@ -1352,31 +1351,97 @@ function removePetMesh() {
     }
 }
 
-// Atualizar posição do pet (seguir jogador)
+// Atualizar posição do pet (seguir jogador + atacar inimigos)
+let petAttackCooldown = 0;
+
 function updatePetPosition() {
     if (!petMesh || !activePet) return;
     
-    // Pet segue o jogador com offset
-    const offset = new THREE.Vector3(1.5, 0, 1.5);
-    offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), hero.rotation.y);
+    // Verificar se há inimigos próximos para atacar
+    let targetEnemy = null;
+    let minDist = 8; // Raio de aggro do pet
     
-    petMesh.position.x = hero.position.x + offset.x;
-    petMesh.position.z = hero.position.z + offset.z;
-    petMesh.position.y = 0;
+    for(let monster of monsters) {
+        if(!monster.position) continue;
+        const dist = hero.position.distanceTo(monster.position);
+        if(dist < minDist) {
+            minDist = dist;
+            targetEnemy = monster;
+        }
+    }
     
-    // Pet olha para o jogador
-    petMesh.lookAt(hero.position);
+    if(targetEnemy && petAttackCooldown <= 0) {
+        // Pet ataca o inimigo
+        petAttack(targetEnemy);
+        petAttackCooldown = 60; // 1 segundo a 60fps
+    }
+    
+    if(petAttackCooldown > 0) petAttackCooldown--;
+    
+    // Se não estiver atacando, segue o jogador
+    if(!targetEnemy || minDist > 5) {
+        // Pet segue o jogador com offset
+        const offset = new THREE.Vector3(1.5, 0, 1.5);
+        offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), hero.rotation.y);
+        
+        petMesh.position.x = hero.position.x + offset.x;
+        petMesh.position.z = hero.position.z + offset.z;
+        petMesh.position.y = 0;
+        
+        // Pet olha para o jogador
+        petMesh.lookAt(hero.position);
+    } else {
+        // Pet olha para o inimigo enquanto ataca
+        petMesh.lookAt(targetEnemy.position);
+    }
     
     // Animação de flutuar
     petMesh.children[0].position.y = 0.4 + Math.sin(Date.now() * 0.005) * 0.1;
 }
 
+function petAttack(target) {
+    if(!target || !target.position || !target.userData) return;
+    
+    // Efeito visual do ataque
+    const attackGeom = new THREE.SphereGeometry(0.3, 8, 8);
+    const attackMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+    const attackBall = new THREE.Mesh(attackGeom, attackMat);
+    attackBall.position.copy(petMesh.position);
+    scene.add(attackBall);
+    
+    // Animar projétil indo até o inimigo
+    const direction = new THREE.Vector3().subVectors(target.position, petMesh.position).normalize();
+    let progress = 0;
+    
+    function animateProjectile() {
+        progress += 0.15;
+        attackBall.position.add(direction.clone().multiplyScalar(0.8));
+        
+        if(progress >= 1 || !target.parent) {
+            scene.remove(attackBall);
+            if(target.parent && target.userData.hp !== undefined) {
+                // Causar dano no inimigo (20% do ATK do player + bonus do pet)
+                const petDamage = Math.floor(player.atk * 0.2 + (activePet.bonus.atk || 0));
+                target.userData.hp -= petDamage;
+                floatingText(`🐾 -${petDamage}`, target.position, "#00ffff");
+                
+                // Verificar se morreu
+                if(target.userData.hp <= 0) {
+                    killMonster(target);
+                }
+            }
+        } else {
+            requestAnimationFrame(animateProjectile);
+        }
+    }
+    animateProjectile();
+}
+
 function showPetsWindow() {
-    // Se já estiver aberta, fecha
+    // Se já estiver aberta, não faz nada (evita bug de abrir múltiplas janelas)
     const existing = document.getElementById('petsWindow');
     if (existing) {
-        closePetsWindow();
-        return;
+        return; // Já está aberta, não faz nada
     }
     
     gamePaused = true;
@@ -2354,6 +2419,33 @@ function spawnBossWithScaling() {
     log("<span style='color:red; font-weight:bold;'>👹 UM BOSS APARECEU! Poder: x" + bossMultiplier.toFixed(2) + "</span>");
 }
 
+// Função para criar mesh de item no chão (usada em killMonster)
+function createItemDropMesh(item, position) {
+    let color = 0xffffff;
+    if(item.rarity === 'comum') color = 0xcccccc;
+    else if(item.rarity === 'raro') color = 0x0000ff;
+    else if(item.rarity === 'epico') color = 0xa020f0;
+    else if(item.rarity === 'lendario') color = 0xffd700;
+    
+    const geometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+    const material = new THREE.MeshStandardMaterial({ 
+        color: color, 
+        emissive: color, 
+        emissiveIntensity: 0.3 
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    
+    if(position.x !== undefined) {
+        mesh.position.copy(position);
+    } else {
+        mesh.position.set(position.position.x, position.position.y, position.position.z);
+    }
+    mesh.position.y = 0.3;
+    
+    mesh.userData = { isItem: true, itemData: item };
+    return mesh;
+}
+
 function killMonster(m){
     // Recompensa por matar Boss: 2x XP base, garantido mínimo de 40% do XP do nível atual
     let xpGain = m.userData.xp;
@@ -2506,8 +2598,22 @@ function killMonster(m){
     // Ganhar XP para o pet ativo
     gainPetXp(xpGain * 0.1); // Pet ganha 10% do XP do jogador
 
-    scene.remove(m); m.userData.ui.bar.remove(); m.userData.label.remove();
-    monsters.splice(monsters.indexOf(m),1);
+    // Remover monstro com segurança (evita double-remove)
+    if(m.parent) {
+        scene.remove(m);
+    }
+    if(m.userData.ui && m.userData.ui.bar) {
+        m.userData.ui.bar.remove();
+    }
+    if(m.userData.label) {
+        m.userData.label.remove();
+    }
+    
+    const monsterIndex = monsters.indexOf(m);
+    if(monsterIndex > -1) {
+        monsters.splice(monsterIndex, 1);
+    }
+    
     checkLevel();
 }
 
@@ -3315,7 +3421,7 @@ function toggleV(){
         gamePaused = false;
     } else {
         win.style.display = 'block';
-        updatePanels();
+        updatePanels(); // Atualiza painel com stats e pet equipado
         gamePaused = true;
     }
 }
