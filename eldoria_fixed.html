@@ -3130,9 +3130,21 @@ function usePotion() {
             return;
         }
         player.hp = Math.min(player.maxHp, player.hp + potion.heal);
+        floatingText("+" + potion.heal + " HP", hero.position.clone().add(new THREE.Vector3(0, 2.5, 0)), '#44ff88');
+        playSound('potion');
+        inventory[potionIndex].quantity--;
+        if(inventory[potionIndex].quantity <= 0) inventory.splice(potionIndex, 1);
+        updateUI();
+    } else {
+        log("<span style='color:orange'>Sem poções!</span>");
+        floatingText("Sem poções!", hero.position.clone().add(new THREE.Vector3(0, 2.5, 0)), '#ff4444');
+        playSound('error');
+    }
+}
 
 // 🔨 SISTEMA DE CRAFTING - Interface e funções
 let craftingModalOpen = false;
+let isCrafting = false;
 
 function openCrafting() {
     if (craftingModalOpen) {
@@ -3288,17 +3300,7 @@ function craftItem(recipeId) {
     }, recipe.craftTime);
 }
 
-        potion.quantity--;
-        floatingText("🧪 +" + potion.heal + " HP", hero.position, "lime");
-        log("<span style='color:cyan'>Poção usada! +" + potion.heal + " HP</span>");
-        if(potion.quantity <= 0) {
-            inventory.splice(potionIndex, 1);
-        }
-        updatePanels();
-    } else {
-        log("<span style='color:red'>Sem poções no inventário!</span>");
-    }
-}
+// Código duplicado removido - função usePotion já está completa acima
 
 function floatingText(txt,pos,color){
     let d=document.createElement("div"); d.style.position="fixed"; d.style.color=color; d.style.fontWeight="bold"; d.style.zIndex="6000";
